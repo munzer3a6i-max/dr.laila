@@ -146,11 +146,8 @@ html[lang="en"] .lang-switch__label{ font-size:15px; }
 }
 
 .logo{ display:flex; align-items:center; gap:10px; flex:none; }
-.logo__mark{ width:44px; height:44px; flex:none; }
-.logo__mark svg{ width:100%; height:100%; }
-.logo__text{ display:flex; flex-direction:column; line-height:1.25; }
-.logo__text strong{ font-size:16px; font-weight:600; color:var(--text); }
-.logo__text small{ font-size:12px; color:var(--text-2); }
+/* brand wordmark — fixed height, width follows the artwork's ratio */
+.logo__img{ height:58px; width:auto; flex:none; }
 
 .nav{ display:flex; align-items:center; gap:28px; }
 .nav a{
@@ -533,8 +530,7 @@ html[lang="en"] .lang-switch__label{ font-size:15px; }
 .footer__links a:hover{ color:var(--secondary); }
 
 .footer__brand{ display:flex; flex-direction:column; gap:16px; align-items:flex-start; max-width:313px; }
-.footer__mark{ width:97px; height:127px; }
-.footer__mark svg{ width:100%; height:100%; }
+.footer__mark{ width:97px; height:auto; }
 .footer__brand p{ font-size:14px; text-align:start; color:var(--footer-text); }
 
 .footer__bottom{ margin-top:44px; display:flex; flex-direction:column; gap:33px; }
@@ -600,7 +596,7 @@ html[lang="en"] .lang-switch__label{ font-size:15px; }
   .header__inner{ min-height:76px; }
   html{ scroll-padding-top:90px; }
   .nav{ inset-block-start:76px; padding-inline:20px; }
-  .logo__text small{ display:none; }
+  .logo__img{ height:44px; }
 
   .booking__grid{ grid-template-columns:1fr; gap:36px; }
   .testimonials__grid{ grid-template-columns:1fr; }
@@ -630,12 +626,13 @@ html[lang="en"] .lang-switch__label{ font-size:15px; }
   .hero__cta .btn, .hero__cta .link-plain{ width:100%; text-align:center; }
   .bk-col--time .slot{ min-width:0; flex:1 1 calc(50% - 5px); }
 
-  /* the header row runs out of room — keep the mark, drop the wordmark */
-  .header__inner{ gap:10px; }
-  .header__actions{ gap:8px; }
-  .logo__text{ display:none; }
-  .logo__mark{ width:38px; height:38px; }
-  .btn--gold{ padding:8px 10px; font-size:14px; }
+  /* the header row runs out of room; English labels are wider than the
+     Arabic ones, so the logo and the gold button both shrink to fit 320px */
+  .header__inner{ gap:8px; }
+  .header__actions{ gap:6px; }
+  .logo__img{ height:32px; }
+  .btn--gold{ padding:7px 9px; font-size:13px; }
+  .nav-toggle{ width:34px; padding-inline:5px; }
 }
 
 @media (prefers-reduced-motion:reduce){

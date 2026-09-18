@@ -30,8 +30,6 @@
       'a11y.menuOpen': 'فتح القائمة',
       'a11y.menuClose': 'إغلاق القائمة',
 
-      'header.name': 'د. دلال العصيمي',
-      'header.role': 'أخصائية نفسية',
       'header.logoAria': 'د. دلال العصيمي — الصفحة الرئيسية',
       'header.bookBtn': 'حجز جلسة',
 
@@ -185,8 +183,6 @@
       'a11y.menuOpen': 'Open menu',
       'a11y.menuClose': 'Close menu',
 
-      'header.name': 'Dr. Dalal Al-Osaimy',
-      'header.role': 'Psychologist',
       'header.logoAria': 'Dr. Dalal Al-Osaimy — home',
       'header.bookBtn': 'Book a session',
 
