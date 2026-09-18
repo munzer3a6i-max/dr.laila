@@ -35,20 +35,33 @@
        fallback. Riyadh has no daylight saving, so this is exact. */
     utcOffset: '+03:00',
 
-    /* ── Session types ────────────────────────────────────────
-       `calEventTypeId` is the numeric id of the matching Cal.com
-       event type. Find it in the URL when you open the event type
-       in Cal.com: /event-types/1234567  →  1234567
-       Event type ids are not secret.
+    /* Your Cal.com username — the part after cal.com/ in your booking
+       links. Required when session types are matched by slug.     */
+    calUsername: 'munzer-3a6i-tygizv',
 
-       `minutes` and `price` drive the summary shown to the visitor;
-       the authoritative duration is whatever the Cal.com event type
-       says.                                                     */
+    /* ── Session types ────────────────────────────────────────
+       Point each one at a Cal.com event type, either way round:
+
+         calEventSlug   the part after your username in the public
+                        booking link: cal.com/<username>/<slug>
+         calEventTypeId the numeric id from the dashboard URL
+                        /event-types/1234567  →  1234567
+
+       Neither is secret — both appear in public booking links.
+       Leave both null and that session type stays in local mode.
+
+       `minutes` and `price` are only what the visitor sees in the
+       summary. The real duration is whatever the Cal.com event type
+       is set to, so keep them in step.                           */
     sessionTypes: [
-      { id: 'intro',      labelKey: 'type.intro',      minutes: 50, price: 100, calEventTypeId: null },
-      { id: 'individual', labelKey: 'type.individual', minutes: 60, price: 250, calEventTypeId: null },
-      { id: 'family',     labelKey: 'type.family',     minutes: 90, price: 350, calEventTypeId: null },
-      { id: 'followup',   labelKey: 'type.followup',   minutes: 30, price: 150, calEventTypeId: null }
+      /* ⚠ TEST WIRING — points at a 15-minute test event, so Cal.com will
+         book 15 minutes while the summary still reads 50. Swap the slug
+         for the real "جلسة تعريفية" event type and this lines up.      */
+      { id: 'intro',      labelKey: 'type.intro',      minutes: 50, price: 100, calEventSlug: '15min', calEventTypeId: null },
+
+      { id: 'individual', labelKey: 'type.individual', minutes: 60, price: 250, calEventSlug: null, calEventTypeId: null },
+      { id: 'family',     labelKey: 'type.family',     minutes: 90, price: 350, calEventSlug: null, calEventTypeId: null },
+      { id: 'followup',   labelKey: 'type.followup',   minutes: 30, price: 150, calEventSlug: null, calEventTypeId: null }
     ],
 
     /* Services shown in the first dropdown. Recorded on the booking
@@ -195,8 +208,25 @@
     return CONFIG.sessionTypes[0];
   }
 
+  /** Query fragment naming this session type's Cal.com event, or null. */
+  function eventRef(type) {
+    if (type.calEventTypeId) {
+      return { params: 'eventTypeId=' + encodeURIComponent(type.calEventTypeId),
+               body: { eventTypeId: type.calEventTypeId },
+               key: 'id:' + type.calEventTypeId };
+    }
+    if (type.calEventSlug && CONFIG.calUsername) {
+      return { params: 'eventTypeSlug=' + encodeURIComponent(type.calEventSlug)
+                     + '&username=' + encodeURIComponent(CONFIG.calUsername),
+               body: { eventTypeSlug: type.calEventSlug, username: CONFIG.calUsername },
+               key: 'slug:' + CONFIG.calUsername + '/' + type.calEventSlug };
+    }
+    return null;
+  }
+
   function monthKey(y, m) {
-    return (currentType().calEventTypeId || 'local') + '|' + y + '-' + m;
+    var ref = eventRef(currentType());
+    return (ref ? ref.key : 'local') + '|' + y + '-' + m;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -238,15 +268,25 @@
     return byDate;
   }
 
+  /** True once at least one session type points at a Cal.com event type. */
+  function anyConnected() {
+    var i;
+    for (i = 0; i < CONFIG.sessionTypes.length; i++) {
+      if (eventRef(CONFIG.sessionTypes[i])) return true;
+    }
+    return false;
+  }
+
   function useLocal(entry, year, month, reason) {
     entry.status = 'local';
     entry.byDate = localMonth(year, month);
     if (!warnedLocal) {
       warnedLocal = true;
       console.warn(
-        '[booking] Cal.com is not reachable (' + reason + ').\n' +
-        '          Running in LOCAL MODE: times come from CONFIG.hours and\n' +
-        '          submitting will NOT create a real booking.\n' +
+        '[booking] LOCAL MODE — no real bookings will be created.\n' +
+        '          Reason: ' + reason + '.\n' +
+        '          Times come from CONFIG.hours and submitting only shows\n' +
+        '          the confirmation screen.\n' +
         '          See README.md → "Connecting Cal.com".'
       );
     }
@@ -258,10 +298,18 @@
     if (months[k] && months[k].status !== 'error') return;
 
     var entry = months[k] = { status: 'loading', byDate: {} };
-    var type = currentType();
+    var ref = eventRef(currentType());
 
-    if (!type.calEventTypeId) {
-      useLocal(entry, year, month, 'no calEventTypeId configured');
+    if (!ref) {
+      /* Once ANY session type is connected, an unconnected one must not
+         fake availability — that would hand the visitor a confirmation
+         for a booking that does not exist. Close it instead. */
+      if (anyConnected()) {
+        entry.status = 'error';
+        entry.message = T('bk.typeUnavailable');
+      } else {
+        useLocal(entry, year, month, 'no Cal.com event type configured');
+      }
       render();
       return;
     }
@@ -270,7 +318,7 @@
     var last = new Date(year, month + 1, 0);
 
     fetch(api('slots')
-      + '?eventTypeId=' + encodeURIComponent(type.calEventTypeId)
+      + '?' + ref.params
       + '&start=' + key(first)
       + '&end=' + key(last)
       + '&timeZone=' + encodeURIComponent(CONFIG.timeZone))
@@ -522,8 +570,13 @@
     if (!email.value.trim()) { setError(email, T('bk.errEmail')); problems.push(email); }
     else if (!EMAIL.test(email.value.trim())) { setError(email, T('bk.errEmailFormat')); problems.push(email); }
 
+    var entry = state.date
+      ? monthEntry(state.date.getFullYear(), state.date.getMonth())
+      : monthEntry(state.view.getFullYear(), state.view.getMonth());
+
     var top = '';
-    if (!state.date) top = T('bk.errPickDay');
+    if (entry.status === 'error') top = entry.message || T('bk.slotsError');
+    else if (!state.date) top = T('bk.errPickDay');
     else if (!state.time) top = T('bk.errPickTime');
     else if (problems.length) top = T('bk.errFields');
 
@@ -567,28 +620,34 @@
 
     busy(true);
 
+    var ref = eventRef(t);
+
     /* Local mode: nothing to book against — confirm locally. */
-    if (entry.status === 'local' || !t.calEventTypeId) {
+    if (entry.status === 'local' || !ref) {
       window.setTimeout(function () { busy(false); showDone(); }, 500);
       return;
     }
 
+    /* Cal.com rejects a lengthInMinutes the event type does not offer, so
+       the event type's own duration is left to win unless one is set. */
+    var payload = {
+      start: state.time,
+      name: document.getElementById('bk-name').value.trim(),
+      email: document.getElementById('bk-email').value.trim(),
+      child: document.getElementById('bk-child').value.trim(),
+      reason: document.getElementById('bk-reason').value.trim(),
+      service: T(el.service.value),
+      timeZone: CONFIG.timeZone,
+      language: window.Lang ? window.Lang.current : 'ar',
+      metadata: { sessionType: t.id, price: String(t.price) }
+    };
+    Object.keys(ref.body).forEach(function (k2) { payload[k2] = ref.body[k2]; });
+    if (t.calLengthInMinutes) payload.lengthInMinutes = t.calLengthInMinutes;
+
     fetch(api('book'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        eventTypeId: t.calEventTypeId,
-        start: state.time,
-        lengthInMinutes: t.minutes,
-        name: document.getElementById('bk-name').value.trim(),
-        email: document.getElementById('bk-email').value.trim(),
-        child: document.getElementById('bk-child').value.trim(),
-        reason: document.getElementById('bk-reason').value.trim(),
-        service: T(el.service.value),
-        timeZone: CONFIG.timeZone,
-        language: window.Lang ? window.Lang.current : 'ar',
-        metadata: { sessionType: t.id, price: String(t.price) }
-      })
+      body: JSON.stringify(payload)
     })
       .then(function (r) {
         return r.json().then(function (j) { return { status: r.status, json: j }; });
@@ -677,8 +736,11 @@
   /* Changing the session type changes the Cal.com event type, and so
      the whole availability picture. */
   el.type.addEventListener('change', function () {
+    state.date = null;
     state.time = null;
+    el.dateInput.value = '';
     el.timeInput.value = '';
+    el.formError.hidden = true;
     refresh();
   });
   el.service.addEventListener('change', renderSummary);

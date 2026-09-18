@@ -9,13 +9,15 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ ok: false, message: 'Method not allowed' });
 
-  if (!cal.configured()) {
-    return res.status(503).json({ ok: false, code: 'NOT_CONFIGURED', message: 'CAL_API_KEY is not set' });
-  }
-
   var q = req.query || {};
+
+  if (!cal.configured(q)) {
+    return res.status(503).json({ ok: false, code: 'NOT_CONFIGURED', message: 'No Cal.com event type configured' });
+  }
   var result = await cal.getSlots({
     eventTypeId: q.eventTypeId,
+    eventTypeSlug: q.eventTypeSlug,
+    username: q.username,
     start: q.start,
     end: q.end,
     timeZone: q.timeZone

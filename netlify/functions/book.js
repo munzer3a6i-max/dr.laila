@@ -11,12 +11,12 @@ exports.handler = async function (event) {
     return { statusCode: 405, headers, body: JSON.stringify({ ok: false, message: 'Method not allowed' }) };
   }
 
-  if (!cal.configured()) {
-    return { statusCode: 503, headers, body: JSON.stringify({ ok: false, code: 'NOT_CONFIGURED', message: 'CAL_API_KEY is not set' }) };
-  }
-
   var body = {};
   try { body = JSON.parse(event.body || '{}'); } catch (e) { body = {}; }
+
+  if (!cal.configured(body)) {
+    return { statusCode: 503, headers, body: JSON.stringify({ ok: false, code: 'NOT_CONFIGURED', message: 'No Cal.com event type configured' }) };
+  }
 
   var result = await cal.createBooking(body);
   return { statusCode: result.ok ? 201 : (result.status || 500), headers, body: JSON.stringify(result) };

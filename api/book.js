@@ -9,13 +9,13 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ ok: false, message: 'Method not allowed' });
 
-  if (!cal.configured()) {
-    return res.status(503).json({ ok: false, code: 'NOT_CONFIGURED', message: 'CAL_API_KEY is not set' });
-  }
-
   var body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch (e) { body = {}; }
+  }
+
+  if (!cal.configured(body || {})) {
+    return res.status(503).json({ ok: false, code: 'NOT_CONFIGURED', message: 'No Cal.com event type configured' });
   }
 
   var result = await cal.createBooking(body || {});
