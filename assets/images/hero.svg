@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 445 539" width="445" height="539" role="img" aria-label="صورة مؤقتة">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D6E4D4"/><stop offset="1" stop-color="#E8E3D9"/>
+    </linearGradient>
+  </defs>
+  <rect width="445" height="539" fill="url(#g)"/>
+  <g fill="none" stroke="#1A5038" stroke-opacity=".38" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="180" cy="226" r="42"/>
+    <path d="M118 340c0-34 28-58 62-58s62 24 62 58"/>
+    <circle cx="272" cy="262" r="28"/>
+    <path d="M238 340c0-24 16-40 34-40 20 0 38 12 38 40"/>
+  </g>
+  <text x="222" y="424" text-anchor="middle" font-family="IBM Plex Sans Arabic, sans-serif" font-size="17" fill="#1A5038" fill-opacity=".62">صورة مؤقتة — استبدلها بصورة الغلاف</text>
+  <text x="222" y="452" text-anchor="middle" font-family="IBM Plex Sans Arabic, sans-serif" font-size="13" fill="#575757" fill-opacity=".7">assets/images/hero.svg · 445×539</text>
+</svg>
