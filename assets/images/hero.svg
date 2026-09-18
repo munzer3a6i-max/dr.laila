@@ -11,6 +11,6 @@
     <circle cx="272" cy="262" r="28"/>
     <path d="M238 340c0-24 16-40 34-40 20 0 38 12 38 40"/>
   </g>
-  <text x="222" y="424" text-anchor="middle" font-family="IBM Plex Sans Arabic, sans-serif" font-size="17" fill="#1A5038" fill-opacity=".62">صورة مؤقتة — استبدلها بصورة الغلاف</text>
-  <text x="222" y="452" text-anchor="middle" font-family="IBM Plex Sans Arabic, sans-serif" font-size="13" fill="#575757" fill-opacity=".7">assets/images/hero.svg · 445×539</text>
+  <text x="222" y="424" text-anchor="middle" font-family="IBM Plex Sans Arabic, sans-serif" font-size="16" fill="#1A5038" fill-opacity=".62">صورة مؤقتة · placeholder</text>
+  <text x="222" y="452" text-anchor="middle" font-family="IBM Plex Sans Arabic, sans-serif" font-size="13" fill="#575757" fill-opacity=".7">hero · 445×539</text>
 </svg>

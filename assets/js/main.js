@@ -15,17 +15,46 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
+  /* ── language switch ────────────────────────────────────── */
+  var langBtn = document.getElementById('lang-switch');
+  var langLabel = document.getElementById('lang-switch-label');
+
+  function paintLangButton() {
+    if (!window.Lang || !langBtn) return;
+    var target = window.Lang.next();
+    /* show, and announce, the language you would switch TO */
+    langLabel.textContent = target === 'ar' ? 'ع' : 'EN';
+    langLabel.lang = target;
+    langBtn.setAttribute('lang', target);
+    langBtn.setAttribute(
+      'aria-label',
+      target === 'ar' ? 'التبديل إلى العربية' : 'Switch to English'
+    );
+  }
+
+  if (langBtn && window.Lang) {
+    langBtn.addEventListener('click', function () { window.Lang.set(window.Lang.next()); });
+    window.Lang.onChange(paintLangButton);
+    paintLangButton();
+  }
+
   /* ── mobile nav ─────────────────────────────────────────── */
+  function navLabel(open) {
+    return window.Lang
+      ? window.Lang.t(open ? 'a11y.menuClose' : 'a11y.menuOpen')
+      : (open ? 'إغلاق القائمة' : 'فتح القائمة');
+  }
+
   function closeNav() {
     nav.classList.remove('is-open');
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.setAttribute('aria-label', 'فتح القائمة');
+    toggle.setAttribute('aria-label', navLabel(false));
   }
 
   toggle.addEventListener('click', function () {
     var open = nav.classList.toggle('is-open');
     toggle.setAttribute('aria-expanded', String(open));
-    toggle.setAttribute('aria-label', open ? 'إغلاق القائمة' : 'فتح القائمة');
+    toggle.setAttribute('aria-label', navLabel(open));
   });
 
   nav.addEventListener('click', function (e) {

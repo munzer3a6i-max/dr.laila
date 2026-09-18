@@ -1,11 +1,18 @@
 /* ============================================================
-   نظام الحجز — Reservation system
+   نظام الحجز — Reservation system (Cal.com backed)
    ------------------------------------------------------------
-   Front-end booking flow (session type → day → time → details)
-   that posts the completed reservation to a hosted form endpoint.
+   Availability is read from, and bookings are written to, your
+   Cal.com account — which is what puts them on your connected
+   calendar. The browser never sees the API key: it talks to
+   /api/slots and /api/book, which run server-side.
 
-   ⚙️  EVERYTHING YOU NEED TO CONFIGURE IS IN THE `CONFIG` BLOCK
-       DIRECTLY BELOW. See README.md for the walkthrough.
+   If those endpoints are unreachable (opened as a plain file, or
+   deployed somewhere without serverless functions) the flow falls
+   back to LOCAL MODE: times are generated from CONFIG.hours and
+   submitting only shows the confirmation screen. The console says
+   so explicitly when this happens.
+
+   ⚙️  Configure below. Full walkthrough in README.md.
    ============================================================ */
 (function () {
   'use strict';
@@ -15,28 +22,46 @@
      ══════════════════════════════════════════════════════════ */
   var CONFIG = {
 
-    /* ── 1. Where bookings are delivered ──────────────────────
-       Free Web3Forms account → https://web3forms.com
-       Paste the access key you receive by email below.
-       While this is left as 'YOUR_WEB3FORMS_ACCESS_KEY' the form
-       runs in DEMO MODE: it validates and shows the success
-       screen but sends nothing.                                */
-    accessKey: 'YOUR_WEB3FORMS_ACCESS_KEY',
-    endpoint : 'https://api.web3forms.com/submit',
+    /* Where the serverless endpoints live. '' = same origin (/api/…).
+       Point it at another deployment if the site is hosted separately,
+       e.g. 'https://booking.drdalal.com'.                        */
+    apiBase: '',
 
-    /* ── 2. Session types ─────────────────────────────────────
-       price is in SAR, duration in minutes.                    */
+    /* The practice's timezone. Visitors always see clinic time, so
+       nobody books 3 AM by accident. Must match CAL_TIMEZONE. */
+    timeZone: 'Asia/Riyadh',
+
+    /* Fixed UTC offset for the timezone above, used ONLY by the local
+       fallback. Riyadh has no daylight saving, so this is exact. */
+    utcOffset: '+03:00',
+
+    /* ── Session types ────────────────────────────────────────
+       `calEventTypeId` is the numeric id of the matching Cal.com
+       event type. Find it in the URL when you open the event type
+       in Cal.com: /event-types/1234567  →  1234567
+       Event type ids are not secret.
+
+       `minutes` and `price` drive the summary shown to the visitor;
+       the authoritative duration is whatever the Cal.com event type
+       says.                                                     */
     sessionTypes: [
-      { id: 'intro',    label: 'جلسة تعريفية',        minutes: 50, price: 100 },
-      { id: 'individual', label: 'جلسة فردية',        minutes: 60, price: 250 },
-      { id: 'family',   label: 'جلسة عائلية',          minutes: 90, price: 350 },
-      { id: 'followup', label: 'جلسة متابعة',          minutes: 30, price: 150 }
+      { id: 'intro',      labelKey: 'type.intro',      minutes: 50, price: 100, calEventTypeId: null },
+      { id: 'individual', labelKey: 'type.individual', minutes: 60, price: 250, calEventTypeId: null },
+      { id: 'family',     labelKey: 'type.family',     minutes: 90, price: 350, calEventTypeId: null },
+      { id: 'followup',   labelKey: 'type.followup',   minutes: 30, price: 150, calEventTypeId: null }
     ],
 
-    /* ── 3. Working hours, by weekday ─────────────────────────
-       0 = Sunday … 6 = Saturday. Times are 24-hour "HH:MM".
-       `step` is the spacing between bookable slots, in minutes.
-       Matches the hours printed in the footer.                 */
+    /* Services shown in the first dropdown. Recorded on the booking
+       as context; they do not change availability. */
+    services: ['svc.anxiety', 'svc.mood', 'svc.personality', 'svc.marriage', 'svc.children'],
+
+    /* ── Booking window ─────────────────────────────────────── */
+    minDaysAhead: 0,     /* 0 = today is bookable, 1 = from tomorrow */
+    maxDaysAhead: 90,
+    weekStart: 5,        /* first calendar column: 5 = Friday (per the design) */
+
+    /* ── Local fallback only ─────────────────────────────────
+       Ignored entirely once Cal.com is connected. */
     hours: {
       0: { from: '09:00', to: '12:00' },   /* الأحد    */
       1: { from: '09:00', to: '12:00' },   /* الاثنين  */
@@ -46,137 +71,85 @@
       5: { from: '19:00', to: '22:00' },   /* الجمعة   */
       6: { from: '19:00', to: '22:00' }    /* السبت    */
     },
-    step: 30,
-
-    /* ── 4. Availability ──────────────────────────────────────
-       There is no back-end, so the page cannot know what is
-       really booked. Add taken slots here by date:
-           booked: { '2026-10-05': ['09:30', '11:00'] }         */
-    booked: {},
-
-    /* Shows a couple of greyed-out slots per day so the
-       "unavailable" state is visible in the demo. SET THIS TO
-       FALSE once you wire up real availability.                */
-    demoUnavailable: true,
-
-    /* ── 5. Booking window ────────────────────────────────────  */
-    minDaysAhead: 0,     /* 0 = today is bookable, 1 = from tomorrow */
-    maxDaysAhead: 90,
-
-    /* First column of the calendar. 5 = Friday (matches the
-       design), 0 = Sunday, 6 = Saturday.                       */
-    weekStart: 5
+    step: 30
   };
 
   /* ══════════════════════════════════════════════════════════
-     Localisation helpers
+     Helpers
      ══════════════════════════════════════════════════════════ */
-  var MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
-                'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-  var DOW_SHORT = ['أحد','اثنين','ثلاثاء','اربعاء','خميس','جمعة','سبت'];
-  var DOW_LONG  = ['الأحد','الاثنين','الثلاثاء','الاربعاء','الخميس','الجمعة','السبت'];
+  var T = function (k) { return window.Lang ? window.Lang.t(k) : k; };
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function addDays(d, n) { var c = startOfDay(d); c.setDate(c.getDate() + n); return c; }
 
-  /** Local (not UTC) ISO date key — avoids timezone drift. */
-  function key(d) {
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  }
-
-  function startOfDay(d) {
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  }
-
-  function addDays(d, n) {
-    var c = startOfDay(d);
-    c.setDate(c.getDate() + n);
-    return c;
-  }
+  /** Local calendar-date key, never UTC — avoids off-by-one near midnight. */
+  function key(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 
   function toMinutes(hhmm) {
     var p = hhmm.split(':');
     return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
   }
 
-  /** "13:30" → "1:30 م" */
-  function formatTime(hhmm) {
-    var m = toMinutes(hhmm);
+  var _hm = null, _dk = null;
+  function hmFormatter() {
+    if (!_hm) _hm = new Intl.DateTimeFormat('en-GB', {
+      timeZone: CONFIG.timeZone, hour12: false, hour: '2-digit', minute: '2-digit'
+    });
+    return _hm;
+  }
+  function dateKeyFormatter() {
+    if (!_dk) _dk = new Intl.DateTimeFormat('en-CA', {
+      timeZone: CONFIG.timeZone, year: 'numeric', month: '2-digit', day: '2-digit'
+    });
+    return _dk;
+  }
+
+  /** ISO instant → "HH:MM" in the practice's timezone. */
+  function isoToHM(iso) {
+    return hmFormatter().format(new Date(iso));
+  }
+
+  /** ISO instant → "YYYY-MM-DD" in the practice's timezone. */
+  function isoToDateKey(iso) {
+    return dateKeyFormatter().format(new Date(iso));
+  }
+
+  /** ISO instant → localised clock time, e.g. "9:00 ص" / "9:00 AM". */
+  function formatTime(iso) {
+    var m = toMinutes(isoToHM(iso));
     var h = Math.floor(m / 60);
-    var suffix = h < 12 ? 'ص' : 'م';
-    var h12 = h % 12;
-    if (h12 === 0) h12 = 12;
+    var suffix = h < 12 ? T('bk.am') : T('bk.pm');
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
     return h12 + ':' + pad(m % 60) + ' ' + suffix;
   }
 
-  /** Date → "الاربعاء ، 25 يوليو" */
+  /** Date → "الاربعاء ، 25 يوليو" / "Wednesday, 25 July". */
   function formatDay(d) {
-    return DOW_LONG[d.getDay()] + ' ، ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+    var dow = T('bk.dowLong')[d.getDay()];
+    var month = T('bk.months')[d.getMonth()];
+    return window.Lang && window.Lang.current === 'ar'
+      ? dow + ' ، ' + d.getDate() + ' ' + month
+      : dow + ', ' + d.getDate() + ' ' + month;
   }
 
   function formatDuration(mins) {
-    if (mins === 60) return 'ساعة';
-    if (mins === 90) return 'ساعة ونصف';
-    if (mins === 30) return 'نصف ساعة';
-    return mins + ' دقيقة';
+    if (mins === 60) return T('bk.hour');
+    if (mins === 90) return T('bk.hourHalf');
+    if (mins === 30) return T('bk.halfHour');
+    return mins + ' ' + T('bk.minutes');
   }
+
+  function formatPrice(p) {
+    return window.Lang && window.Lang.current === 'ar'
+      ? p + ' ' + T('bk.currency')
+      : T('bk.currency') + ' ' + p;
+  }
+
+  function api(path) { return (CONFIG.apiBase || '') + '/api/' + path; }
 
   /* ══════════════════════════════════════════════════════════
-     Availability
-     ══════════════════════════════════════════════════════════ */
-
-  /** Stable per-date pseudo-random, so the demo does not flicker. */
-  function hash(str) {
-    var h = 2166136261, i;
-    for (i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h = (h * 16777619) >>> 0;
-    }
-    return h;
-  }
-
-  /** All slot strings ("HH:MM") the practice offers on a given day. */
-  function slotsFor(date) {
-    var window_ = CONFIG.hours[date.getDay()];
-    if (!window_) return [];
-
-    var out = [];
-    var from = toMinutes(window_.from);
-    var to   = toMinutes(window_.to);
-    for (var m = from; m <= to; m += CONFIG.step) {
-      out.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
-    }
-    return out;
-  }
-
-  function isTaken(date, slot) {
-    var k = key(date);
-    var list = CONFIG.booked[k];
-    if (list && list.indexOf(slot) !== -1) return true;
-
-    if (CONFIG.demoUnavailable && hash(k + slot) % 5 === 0) return true;
-
-    /* A slot already in the past today is not bookable. */
-    var now = new Date();
-    if (k === key(now)) {
-      if (toMinutes(slot) <= now.getHours() * 60 + now.getMinutes()) return true;
-    }
-    return false;
-  }
-
-  function isDayOpen(date) {
-    var min = addDays(new Date(), CONFIG.minDaysAhead);
-    var max = addDays(new Date(), CONFIG.maxDaysAhead);
-    if (date < min || date > max) return false;
-
-    var slots = slotsFor(date), i;
-    for (i = 0; i < slots.length; i++) {
-      if (!isTaken(date, slots[i])) return true;
-    }
-    return false;
-  }
-
-  /* ══════════════════════════════════════════════════════════
-     State + DOM
+     State
      ══════════════════════════════════════════════════════════ */
   var form = document.getElementById('booking-form');
   if (!form) return;
@@ -193,6 +166,7 @@
     timeInput : document.getElementById('bk-time'),
     timeDate  : document.getElementById('bk-time-date'),
     slots     : document.getElementById('bk-slots'),
+    tzNote    : document.getElementById('bk-tz'),
     sumMain   : document.getElementById('bk-summary-main'),
     sumMeta   : document.getElementById('bk-summary-meta'),
     formError : document.getElementById('bk-form-error'),
@@ -203,13 +177,16 @@
   };
 
   var state = {
-    view     : startOfDay(new Date()),  /* month currently rendered */
-    date     : null,                    /* chosen Date */
-    time     : null,                    /* chosen "HH:MM" */
-    focusDate: null                     /* roving tabindex target */
+    view : startOfDay(new Date()),
+    date : null,     /* Date */
+    time : null,     /* ISO start string */
+    focusDate: null
   };
 
-  /* ── session types ──────────────────────────────────────── */
+  /** monthKey → { status, byDate } ; status: loading | ready | local | error */
+  var months = {};
+  var warnedLocal = false;
+
   function currentType() {
     var i;
     for (i = 0; i < CONFIG.sessionTypes.length; i++) {
@@ -218,43 +195,182 @@
     return CONFIG.sessionTypes[0];
   }
 
-  function buildTypes() {
-    var frag = document.createDocumentFragment();
+  function monthKey(y, m) {
+    return (currentType().calEventTypeId || 'local') + '|' + y + '-' + m;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Availability
+     ══════════════════════════════════════════════════════════ */
+
+  /** Fallback slot generation from CONFIG.hours, as ISO instants. */
+  function localMonth(year, month) {
+    var byDate = {};
+    var first = new Date(year, month, 1);
+    var min = addDays(new Date(), CONFIG.minDaysAhead);
+    var max = addDays(new Date(), CONFIG.maxDaysAhead);
+    var now = new Date();
+    var d, w, list, m, hhmm, iso;
+
+    for (d = first; d.getMonth() === month; d = addDays(d, 1)) {
+      if (d < min || d > max) continue;
+      w = CONFIG.hours[d.getDay()];
+      if (!w) continue;
+
+      list = [];
+      for (m = toMinutes(w.from); m <= toMinutes(w.to); m += CONFIG.step) {
+        hhmm = pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+        iso = key(d) + 'T' + hhmm + ':00' + CONFIG.utcOffset;
+        if (new Date(iso) <= now) continue;      /* no booking the past */
+        list.push(iso);
+      }
+      if (list.length) byDate[key(d)] = list;
+    }
+    return byDate;
+  }
+
+  function groupByDate(isoList) {
+    var byDate = {};
+    isoList.forEach(function (iso) {
+      var k = isoToDateKey(iso);
+      (byDate[k] || (byDate[k] = [])).push(iso);
+    });
+    return byDate;
+  }
+
+  function useLocal(entry, year, month, reason) {
+    entry.status = 'local';
+    entry.byDate = localMonth(year, month);
+    if (!warnedLocal) {
+      warnedLocal = true;
+      console.warn(
+        '[booking] Cal.com is not reachable (' + reason + ').\n' +
+        '          Running in LOCAL MODE: times come from CONFIG.hours and\n' +
+        '          submitting will NOT create a real booking.\n' +
+        '          See README.md → "Connecting Cal.com".'
+      );
+    }
+  }
+
+  /** Load one month of availability, once, and re-render when it lands. */
+  function ensureMonth(year, month) {
+    var k = monthKey(year, month);
+    if (months[k] && months[k].status !== 'error') return;
+
+    var entry = months[k] = { status: 'loading', byDate: {} };
+    var type = currentType();
+
+    if (!type.calEventTypeId) {
+      useLocal(entry, year, month, 'no calEventTypeId configured');
+      render();
+      return;
+    }
+
+    var first = new Date(year, month, 1);
+    var last = new Date(year, month + 1, 0);
+
+    fetch(api('slots')
+      + '?eventTypeId=' + encodeURIComponent(type.calEventTypeId)
+      + '&start=' + key(first)
+      + '&end=' + key(last)
+      + '&timeZone=' + encodeURIComponent(CONFIG.timeZone))
+      .then(function (r) {
+        return r.json().then(function (j) { return { status: r.status, json: j }; });
+      })
+      .then(function (out) {
+        if (months[k] !== entry) return;                  /* superseded */
+
+        if (out.status === 503 || out.status === 404) {
+          useLocal(entry, year, month, 'endpoint returned ' + out.status);
+        } else if (!out.json || out.json.ok !== true) {
+          entry.status = 'error';
+          entry.message = (out.json && out.json.message) || T('bk.slotsError');
+        } else {
+          entry.status = 'ready';
+          entry.byDate = groupByDate(out.json.slots || []);
+        }
+        render();
+      })
+      .catch(function (err) {
+        if (months[k] !== entry) return;
+        useLocal(entry, year, month, err.message);
+        render();
+      });
+  }
+
+  function monthEntry(year, month) {
+    return months[monthKey(year, month)] || { status: 'loading', byDate: {} };
+  }
+
+  function slotsForDate(d) {
+    var entry = monthEntry(d.getFullYear(), d.getMonth());
+    return entry.byDate[key(d)] || [];
+  }
+
+  function inWindow(d) {
+    return d >= addDays(new Date(), CONFIG.minDaysAhead)
+        && d <= addDays(new Date(), CONFIG.maxDaysAhead);
+  }
+
+  function isDayOpen(d) {
+    if (!inWindow(d)) return false;
+    var entry = monthEntry(d.getFullYear(), d.getMonth());
+    /* while a month is in flight, keep in-window days clickable */
+    if (entry.status === 'loading') return true;
+    if (entry.status === 'error') return false;
+    return slotsForDate(d).length > 0;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Rendering
+     ══════════════════════════════════════════════════════════ */
+  function buildSelects() {
+    var prevService = el.service.value;
+    var prevType = el.type.value;
+
+    el.service.innerHTML = '';
+    CONFIG.services.forEach(function (k) {
+      var o = document.createElement('option');
+      o.value = k;
+      o.textContent = T(k);
+      el.service.appendChild(o);
+    });
+    if (prevService) el.service.value = prevService;
+
+    el.type.innerHTML = '';
     CONFIG.sessionTypes.forEach(function (t) {
       var o = document.createElement('option');
       o.value = t.id;
-      o.textContent = t.label + ' — ' + t.minutes + ' دقيقة · ' + t.price + ' ريال';
-      frag.appendChild(o);
+      o.textContent = T(t.labelKey) + ' — ' + formatDuration(t.minutes) + ' · ' + formatPrice(t.price);
+      el.type.appendChild(o);
     });
-    el.type.appendChild(frag);
+    if (prevType) el.type.value = prevType;
   }
 
-  /* ── calendar ───────────────────────────────────────────── */
   function buildDows() {
-    var frag = document.createDocumentFragment(), i, s;
+    el.calDows.innerHTML = '';
+    var short = T('bk.dowShort'), i, s;
     for (i = 0; i < 7; i++) {
       s = document.createElement('span');
-      s.textContent = DOW_SHORT[(CONFIG.weekStart + i) % 7];
-      frag.appendChild(s);
+      s.textContent = short[(CONFIG.weekStart + i) % 7];
+      el.calDows.appendChild(s);
     }
-    el.calDows.appendChild(frag);
   }
 
   function renderCalendar() {
-    var year  = state.view.getFullYear();
+    var year = state.view.getFullYear();
     var month = state.view.getMonth();
 
-    el.calMonth.textContent = MONTHS[month] + ' ' + year;
+    el.calMonth.textContent = T('bk.months')[month] + ' ' + year;
 
     var first = new Date(year, month, 1);
-    /* how many cells before the 1st, given weekStart */
     var lead = (first.getDay() - CONFIG.weekStart + 7) % 7;
     var gridStart = addDays(first, -lead);
-
     var today = startOfDay(new Date());
+
     var frag = document.createDocumentFragment();
     var anyFocusable = false;
-    var i, d, btn, open, inMonth;
+    var i, d, btn, open, inMonth, isFocus;
 
     for (i = 0; i < 42; i++) {
       d = addDays(gridStart, i);
@@ -273,24 +389,21 @@
       if (!open) {
         btn.disabled = true;
         btn.setAttribute('aria-disabled', 'true');
-        btn.setAttribute('aria-label', formatDay(d) + ' — غير متاح');
+        btn.setAttribute('aria-label', formatDay(d) + ' — ' + T('bk.unavailableDay'));
       } else {
         btn.setAttribute('aria-label', formatDay(d));
         btn.setAttribute('aria-pressed', state.date && +state.date === +d ? 'true' : 'false');
         if (state.date && +state.date === +d) btn.classList.add('is-selected');
-
-        var isFocus = state.focusDate && +state.focusDate === +d;
+        isFocus = state.focusDate && +state.focusDate === +d;
         btn.tabIndex = isFocus ? 0 : -1;
         if (isFocus) anyFocusable = true;
       }
-
       frag.appendChild(btn);
     }
 
     el.calGrid.innerHTML = '';
     el.calGrid.appendChild(frag);
 
-    /* make sure exactly one day is reachable by Tab */
     if (!anyFocusable) {
       var firstOpen = el.calGrid.querySelector('.cal-day:not([disabled])');
       if (firstOpen) {
@@ -299,81 +412,84 @@
       }
     }
 
-    /* disable prev when it would leave the bookable window */
-    var minMonth = startOfDay(new Date());
-    el.calPrev.disabled = (year === minMonth.getFullYear() && month === minMonth.getMonth())
-                       || new Date(year, month, 1) < new Date(minMonth.getFullYear(), minMonth.getMonth(), 1);
-
-    var maxDate = addDays(new Date(), CONFIG.maxDaysAhead);
-    el.calNext.disabled = new Date(year, month + 1, 1) > maxDate;
+    var now = startOfDay(new Date());
+    el.calPrev.disabled = new Date(year, month, 1) <= new Date(now.getFullYear(), now.getMonth(), 1);
+    el.calNext.disabled = new Date(year, month + 1, 1) > addDays(new Date(), CONFIG.maxDaysAhead);
   }
 
-  function shiftMonth(delta) {
-    state.view = new Date(state.view.getFullYear(), state.view.getMonth() + delta, 1);
-    renderCalendar();
+  function hint(text) {
+    var p = document.createElement('p');
+    p.className = 'slots__empty';
+    p.textContent = text;
+    return p;
   }
 
-  /* ── time slots ─────────────────────────────────────────── */
   function renderSlots() {
     el.slots.innerHTML = '';
+    el.tzNote.hidden = true;
 
     if (!state.date) {
       el.timeDate.textContent = '—';
-      var hint = document.createElement('p');
-      hint.className = 'slots__empty';
-      hint.textContent = 'اختر اليوم أولاً لعرض الأوقات المتاحة.';
-      el.slots.appendChild(hint);
+      el.slots.appendChild(hint(T('bk.pickDayFirst')));
       return;
     }
 
     el.timeDate.textContent = formatDay(state.date);
 
-    var all = slotsFor(state.date);
-    if (!all.length) {
-      var closed = document.createElement('p');
-      closed.className = 'slots__empty';
-      closed.textContent = 'لا توجد مواعيد في هذا اليوم.';
-      el.slots.appendChild(closed);
+    var entry = monthEntry(state.date.getFullYear(), state.date.getMonth());
+    if (entry.status === 'loading') {
+      el.slots.appendChild(hint(T('bk.loadingSlots')));
+      return;
+    }
+    if (entry.status === 'error') {
+      el.slots.appendChild(hint(entry.message || T('bk.slotsError')));
+      return;
+    }
+
+    var list = slotsForDate(state.date);
+    if (!list.length) {
+      el.slots.appendChild(hint(T('bk.noSlots')));
       return;
     }
 
     var frag = document.createDocumentFragment();
-    all.forEach(function (slot) {
-      var taken = isTaken(state.date, slot);
+    list.forEach(function (iso) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'slot';
-      b.textContent = formatTime(slot);
-      b.dataset.slot = slot;
-
-      if (taken) {
-        b.disabled = true;
-        b.setAttribute('aria-label', formatTime(slot) + ' — محجوز');
-      } else {
-        b.setAttribute('aria-pressed', state.time === slot ? 'true' : 'false');
-        if (state.time === slot) b.classList.add('is-selected');
-      }
+      b.textContent = formatTime(iso);
+      b.dataset.slot = iso;
+      b.setAttribute('aria-pressed', state.time === iso ? 'true' : 'false');
+      if (state.time === iso) b.classList.add('is-selected');
       frag.appendChild(b);
     });
     el.slots.appendChild(frag);
+
+    el.tzNote.textContent = T('bk.tzNote');
+    el.tzNote.hidden = false;
   }
 
-  /* ── summary ────────────────────────────────────────────── */
   function renderSummary() {
     var t = currentType();
-    var parts = [t.label];
-
+    var parts = [T(t.labelKey)];
     if (state.date) parts.push(formatDay(state.date));
     if (state.time) parts.push(formatTime(state.time));
 
-    el.sumMain.textContent = parts.join(' . ');
-    el.sumMeta.textContent = formatDuration(t.minutes) + ' . ' + t.price + ' ريال';
+    el.sumMain.textContent = state.date || state.time
+      ? parts.join(' · ')
+      : T(t.labelKey);
+    el.sumMeta.textContent = formatDuration(t.minutes) + ' · ' + formatPrice(t.price);
   }
 
-  function refresh() {
+  function render() {
     renderCalendar();
     renderSlots();
     renderSummary();
+  }
+
+  function refresh() {
+    ensureMonth(state.view.getFullYear(), state.view.getMonth());
+    render();
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -388,79 +504,48 @@
     else input.removeAttribute('aria-invalid');
   }
 
+  function showFormError(msg) {
+    el.formError.textContent = msg;
+    el.formError.hidden = false;
+  }
+
   function validate() {
     var problems = [];
-    var name   = document.getElementById('bk-name');
-    var child  = document.getElementById('bk-child');
-    var email  = document.getElementById('bk-email');
+    var name = document.getElementById('bk-name');
+    var child = document.getElementById('bk-child');
+    var email = document.getElementById('bk-email');
 
     setError(name, ''); setError(child, ''); setError(email, '');
 
-    if (!name.value.trim()) {
-      setError(name, 'الرجاء إدخال الاسم.');
-      problems.push(name);
-    }
-    if (!child.value.trim()) {
-      setError(child, 'الرجاء إدخال اسم الطفل وعمره.');
-      problems.push(child);
-    }
-    if (!email.value.trim()) {
-      setError(email, 'الرجاء إدخال البريد الالكتروني.');
-      problems.push(email);
-    } else if (!EMAIL.test(email.value.trim())) {
-      setError(email, 'صيغة البريد الالكتروني غير صحيحة.');
-      problems.push(email);
-    }
+    if (!name.value.trim()) { setError(name, T('bk.errName')); problems.push(name); }
+    if (!child.value.trim()) { setError(child, T('bk.errChild')); problems.push(child); }
+    if (!email.value.trim()) { setError(email, T('bk.errEmail')); problems.push(email); }
+    else if (!EMAIL.test(email.value.trim())) { setError(email, T('bk.errEmailFormat')); problems.push(email); }
 
     var top = '';
-    if (!state.date) top = 'الرجاء اختيار اليوم المناسب لك.';
-    else if (!state.time) top = 'الرجاء اختيار الوقت المناسب لك.';
-    else if (problems.length) top = 'الرجاء تعبئة الحقول المطلوبة.';
+    if (!state.date) top = T('bk.errPickDay');
+    else if (!state.time) top = T('bk.errPickTime');
+    else if (problems.length) top = T('bk.errFields');
 
-    if (top) {
-      el.formError.textContent = top;
-      el.formError.hidden = false;
-    } else {
-      el.formError.hidden = true;
-      el.formError.textContent = '';
-    }
+    if (top) showFormError(top);
+    else { el.formError.hidden = true; el.formError.textContent = ''; }
 
     if (problems.length) problems[0].focus();
     else if (!state.date) {
       var firstDay = el.calGrid.querySelector('.cal-day:not([disabled])');
       if (firstDay) firstDay.focus();
     }
-
     return !top;
   }
 
   /* ══════════════════════════════════════════════════════════
      Submit
      ══════════════════════════════════════════════════════════ */
-  function payload() {
-    var t = currentType();
-    return {
-      access_key : CONFIG.accessKey,
-      subject    : 'حجز جديد — ' + t.label + ' — ' + formatDay(state.date),
-      from_name  : 'موقع د. دلال العصيمي',
-      'الاسم'              : document.getElementById('bk-name').value.trim(),
-      'اسم الطفل وعمره'    : document.getElementById('bk-child').value.trim(),
-      'البريد الالكتروني'  : document.getElementById('bk-email').value.trim(),
-      'سبب الجلسة'         : document.getElementById('bk-reason').value.trim() || '—',
-      'الخدمة'             : el.service.value,
-      'نوع الجلسة'         : t.label,
-      'التاريخ'            : formatDay(state.date) + ' (' + key(state.date) + ')',
-      'الوقت'              : formatTime(state.time),
-      'المدة'              : formatDuration(t.minutes),
-      'السعر'              : t.price + ' ريال'
-    };
-  }
-
   function showDone() {
     var t = currentType();
-    el.doneDetail.textContent =
-      t.label + ' · ' + formatDay(state.date) + ' · ' + formatTime(state.time) +
-      ' · ' + t.price + ' ريال';
+    el.doneDetail.textContent = [
+      T(t.labelKey), formatDay(state.date), formatTime(state.time), formatPrice(t.price)
+    ].join(' · ');
 
     form.hidden = true;
     el.done.hidden = false;
@@ -468,53 +553,78 @@
     el.done.focus();
   }
 
+  function busy(on) {
+    el.submit.classList.toggle('is-busy', on);
+    el.submit.disabled = on;
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (!validate()) return;
 
-    var demo = !CONFIG.accessKey || CONFIG.accessKey === 'YOUR_WEB3FORMS_ACCESS_KEY';
+    var t = currentType();
+    var entry = monthEntry(state.date.getFullYear(), state.date.getMonth());
 
-    el.submit.classList.add('is-busy');
-    el.submit.disabled = true;
+    busy(true);
 
-    var done = function () {
-      el.submit.classList.remove('is-busy');
-      el.submit.disabled = false;
-    };
-
-    if (demo) {
-      /* No endpoint configured — validate + confirm locally. */
-      window.setTimeout(function () { done(); showDone(); }, 550);
+    /* Local mode: nothing to book against — confirm locally. */
+    if (entry.status === 'local' || !t.calEventTypeId) {
+      window.setTimeout(function () { busy(false); showDone(); }, 500);
       return;
     }
 
-    fetch(CONFIG.endpoint, {
-      method : 'POST',
+    fetch(api('book'), {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body   : JSON.stringify(payload())
+      body: JSON.stringify({
+        eventTypeId: t.calEventTypeId,
+        start: state.time,
+        lengthInMinutes: t.minutes,
+        name: document.getElementById('bk-name').value.trim(),
+        email: document.getElementById('bk-email').value.trim(),
+        child: document.getElementById('bk-child').value.trim(),
+        reason: document.getElementById('bk-reason').value.trim(),
+        service: T(el.service.value),
+        timeZone: CONFIG.timeZone,
+        language: window.Lang ? window.Lang.current : 'ar',
+        metadata: { sessionType: t.id, price: String(t.price) }
+      })
     })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        done();
-        if (data && data.success) {
-          showDone();
-        } else {
-          el.formError.textContent = 'تعذّر إرسال الحجز. الرجاء المحاولة مرة أخرى أو التواصل معنا مباشرة.';
-          el.formError.hidden = false;
+      .then(function (r) {
+        return r.json().then(function (j) { return { status: r.status, json: j }; });
+      })
+      .then(function (out) {
+        busy(false);
+        if (out.json && out.json.ok) { showDone(); return; }
+
+        if (out.json && out.json.conflict) {
+          /* someone took it mid-form — refetch and make them pick again */
+          showFormError(T('bk.errTaken'));
+          state.time = null;
+          el.timeInput.value = '';
+          delete months[monthKey(state.date.getFullYear(), state.date.getMonth())];
+          refresh();
+          return;
         }
+        showFormError((out.json && out.json.message) || T('bk.errSend'));
       })
       .catch(function () {
-        done();
-        el.formError.textContent = 'تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.';
-        el.formError.hidden = false;
+        busy(false);
+        showFormError(T('bk.errNetwork'));
       });
   });
 
   /* ══════════════════════════════════════════════════════════
      Events
      ══════════════════════════════════════════════════════════ */
-  el.calPrev.addEventListener('click', function () { shiftMonth(-1); });
-  el.calNext.addEventListener('click', function () { shiftMonth(1); });
+  el.calPrev.addEventListener('click', function () {
+    state.view = new Date(state.view.getFullYear(), state.view.getMonth() - 1, 1);
+    refresh();
+  });
+  el.calNext.addEventListener('click', function () {
+    state.view = new Date(state.view.getFullYear(), state.view.getMonth() + 1, 1);
+    refresh();
+  });
 
   el.calGrid.addEventListener('click', function (e) {
     var btn = e.target.closest('.cal-day');
@@ -526,12 +636,15 @@
     el.dateInput.value = btn.dataset.date;
     el.timeInput.value = '';
     el.formError.hidden = true;
-    refresh();
+    render();
   });
 
-  /* Arrow-key navigation across the month grid. */
   el.calGrid.addEventListener('keydown', function (e) {
     var map = { ArrowRight: -1, ArrowLeft: 1, ArrowUp: -7, ArrowDown: 7 };
+    /* arrows follow visual direction, which flips with the language */
+    if (window.Lang && window.Lang.dir === 'ltr') {
+      map = { ArrowRight: 1, ArrowLeft: -1, ArrowUp: -7, ArrowDown: 7 };
+    }
     var delta = map[e.key];
     if (delta === undefined) return;
 
@@ -539,12 +652,10 @@
     if (!btn) return;
     e.preventDefault();
 
-    var from = new Date(btn.dataset.date + 'T00:00:00');
-    var next = addDays(from, delta);
-
-    if (next.getMonth() !== state.view.getMonth() ||
-        next.getFullYear() !== state.view.getFullYear()) {
+    var next = addDays(new Date(btn.dataset.date + 'T00:00:00'), delta);
+    if (next.getMonth() !== state.view.getMonth() || next.getFullYear() !== state.view.getFullYear()) {
       state.view = new Date(next.getFullYear(), next.getMonth(), 1);
+      ensureMonth(state.view.getFullYear(), state.view.getMonth());
     }
     state.focusDate = next;
     renderCalendar();
@@ -556,7 +667,6 @@
   el.slots.addEventListener('click', function (e) {
     var btn = e.target.closest('.slot');
     if (!btn || btn.disabled) return;
-
     state.time = btn.dataset.slot;
     el.timeInput.value = state.time;
     el.formError.hidden = true;
@@ -564,7 +674,13 @@
     renderSummary();
   });
 
-  el.type.addEventListener('change', renderSummary);
+  /* Changing the session type changes the Cal.com event type, and so
+     the whole availability picture. */
+  el.type.addEventListener('change', function () {
+    state.time = null;
+    el.timeInput.value = '';
+    refresh();
+  });
   el.service.addEventListener('change', renderSummary);
 
   el.again.addEventListener('click', function () {
@@ -578,14 +694,13 @@
     ['bk-name', 'bk-child', 'bk-email'].forEach(function (id) {
       setError(document.getElementById(id), '');
     });
-
     el.done.hidden = true;
     form.hidden = false;
+    buildSelects();
     refresh();
     document.getElementById('booking').scrollIntoView({ block: 'start' });
   });
 
-  /* clear a field error as soon as the visitor fixes it */
   ['bk-name', 'bk-child', 'bk-email'].forEach(function (id) {
     var input = document.getElementById(id);
     input.addEventListener('input', function () {
@@ -593,8 +708,20 @@
     });
   });
 
-  /* ── boot ───────────────────────────────────────────────── */
-  buildTypes();
-  buildDows();
-  refresh();
+  /* ── boot + language changes ────────────────────────────── */
+  function boot() {
+    buildSelects();
+    buildDows();
+    refresh();
+  }
+
+  if (window.Lang) {
+    window.Lang.onChange(function () {
+      buildSelects();
+      buildDows();
+      render();
+    });
+  }
+
+  boot();
 })();
