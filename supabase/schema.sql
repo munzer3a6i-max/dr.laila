@@ -36,6 +36,9 @@ create table if not exists public.requests (
   paid_at          timestamptz
 );
 
+-- Added later; safe to re-run this whole file at any time.
+alter table public.requests add column if not exists cal_status text;
+
 create index if not exists requests_status_idx  on public.requests (status);
 create index if not exists requests_created_idx on public.requests (created_at desc);
 create index if not exists requests_starts_idx  on public.requests (starts_at);

@@ -63,7 +63,8 @@
     RATE_LIMITED:    'محاولات كثيرة. انتظر بضع دقائق ثم أعد المحاولة.',
     UNAUTHENTICATED: 'انتهت الجلسة. سجّل الدخول من جديد.',
     NOT_CONFIGURED:  'الإعدادات غير مكتملة على الخادم.',
-    CONFIRM_FAILED:  'تعذّر تثبيت الحجز في التقويم — لم تتغيّر الحالة.'
+    CONFIRM_FAILED:  'تعذّر تثبيت الحجز في التقويم — لم تتغيّر الحالة.',
+    CAL_NOT_CONFIGURED: 'CAL_API_KEY غير مضبوط على الخادم — أضيفيه في إعدادات الاستضافة ثم أعيدي النشر.'
   };
 
   function errorText(json) {
@@ -183,7 +184,15 @@
       fmtSlot(r.starts_at, r.time_zone) + '.'
     );
 
+    var autoAccepted = r.cal_status === 'accepted' && r.status !== 'paid';
+
     el.drawerBody.innerHTML =
+      (autoAccepted
+        ? '<div class="warn">' +
+            '<strong>تنبيه:</strong> ثبّت Cal.com هذا الحجز فورًا وأرسل التأكيد للعميل قبل الدفع. ' +
+            'فعّلي <em>Requires confirmation</em> في نوع الموعد داخل Cal.com حتى تُحجز المواعيد مبدئيًا فقط.' +
+          '</div>'
+        : '') +
       '<div class="block">' +
         '<h3>الموعد المطلوب</h3>' +
         kv('الجلسة', esc(r.session_label)) +
@@ -214,13 +223,17 @@
           ['pending', 'contacted', 'paid', 'cancelled'].map(function (st) {
             return '<button class="status-btn' + (r.status === st ? ' is-on' : '') +
                    (st === 'cancelled' ? ' is-cancel' : '') +
-                   '" type="button" data-set-status="' + st + '">' + STATUS[st] + '</button>';
+                   '" type="button" data-pick-status="' + st + '">' + STATUS[st] + '</button>';
           }).join('') +
         '</div>' +
-        (r.status === 'paid'
-          ? '<p style="margin-top:10px;font-size:13px;color:var(--text-2)">تم تأكيد الموعد في التقويم' +
-            (r.paid_at ? ' — ' + esc(fmtAgo(r.paid_at)) : '') + '</p>'
-          : '<p style="margin-top:10px;font-size:13px;color:var(--text-2)">عند اختيار «مدفوع» يُثبَّت الحجز في تقويمك ويصل العميل إشعار التأكيد.</p>') +
+        '<p class="status-msg" id="status-msg">' +
+          (r.status === 'paid'
+            ? 'الحجز مثبَّت في التقويم' + (r.paid_at ? ' — ' + esc(fmtAgo(r.paid_at)) : '')
+            : 'اختاري الحالة ثم اضغطي «تطبيق التغيير».') +
+        '</p>' +
+        '<button class="btn btn--primary btn--block" type="button" id="apply-status" disabled>' +
+          'تطبيق التغيير' +
+        '</button>' +
       '</div>' +
 
       '<div class="block">' +
@@ -246,24 +259,61 @@
     el.drawer.hidden = false;
   }
 
-  function wireDrawer(r) {
-    /* status */
-    el.drawerBody.querySelectorAll('[data-set-status]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var next = btn.dataset.setStatus;
-        if (next === r.status) return;
-        if (next === 'paid' && !window.confirm('تأكيد أن الدفع تم؟ سيُثبَّت الحجز في تقويمك ويصل العميل إشعار.')) return;
-        if (next === 'cancelled' && !window.confirm('إلغاء هذا الطلب؟ سيُحرَّر الموعد من التقويم.')) return;
+  /* What choosing each status will actually do, said plainly before it happens. */
+  var EFFECT = {
+    pending:   'سيُعاد الطلب إلى قائمة الانتظار.',
+    contacted: 'للتسجيل فقط — لا يتغيّر شيء في التقويم.',
+    paid:      'سيُثبَّت الحجز في تقويمك ويصل العميل إشعار التأكيد. لا تختاريها قبل وصول المبلغ.',
+    cancelled: 'سيُلغى الحجز في التقويم ويتحرّر الموعد لغيره.'
+  };
 
-        btn.disabled = true;
-        call('update', { id: r.id, status: next }).then(function (out) {
-          btn.disabled = false;
-          if (!out.json.ok) { say(errorText(out.json), true); return; }
-          say('تم تحديث الحالة إلى «' + STATUS[next] + '»');
-          load();
-        });
+  function wireDrawer(r) {
+    /* ── status: pick one, read what it does, then apply ── */
+    var picked = r.status;
+    var apply = el.drawerBody.querySelector('#apply-status');
+    var msg = el.drawerBody.querySelector('#status-msg');
+    var buttons = el.drawerBody.querySelectorAll('[data-pick-status]');
+
+    function refreshStatusUI() {
+      Array.prototype.forEach.call(buttons, function (b) {
+        b.classList.toggle('is-on', b.dataset.pickStatus === picked);
+      });
+      var changed = picked !== r.status;
+      apply.disabled = !changed;
+      msg.textContent = changed
+        ? EFFECT[picked]
+        : (r.status === 'paid'
+            ? 'الحجز مثبَّت في التقويم' + (r.paid_at ? ' — ' + fmtAgo(r.paid_at) : '')
+            : 'اختاري الحالة ثم اضغطي «تطبيق التغيير».');
+      msg.classList.toggle('is-warn', changed && (picked === 'paid' || picked === 'cancelled'));
+    }
+
+    Array.prototype.forEach.call(buttons, function (btn) {
+      btn.addEventListener('click', function () {
+        picked = btn.dataset.pickStatus;
+        refreshStatusUI();
       });
     });
+
+    apply.addEventListener('click', function () {
+      if (picked === r.status) return;
+      apply.disabled = true;
+      apply.textContent = 'جارٍ الحفظ…';
+
+      call('update', { id: r.id, status: picked }).then(function (out) {
+        apply.textContent = 'تطبيق التغيير';
+        if (!out.json.ok) {
+          say(errorText(out.json), true);
+          picked = r.status;              /* nothing changed server-side */
+          refreshStatusUI();
+          return;
+        }
+        say('تم تحديث الحالة إلى «' + STATUS[picked] + '»');
+        load();
+      });
+    });
+
+    refreshStatusUI();
 
     /* receipt */
     var drop = el.drawerBody.querySelector('#drop');

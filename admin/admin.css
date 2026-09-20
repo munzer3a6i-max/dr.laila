@@ -199,6 +199,22 @@ a{ color:var(--primary); }
 .status-btn.is-on{ background:var(--primary); border-color:var(--primary); color:var(--bg); }
 .status-btn.is-on.is-cancel{ background:var(--danger); border-color:var(--danger); }
 
+.status-msg{
+  margin:12px 0; font-size:13px; line-height:1.6; color:var(--text-2);
+  transition:color var(--dur-fast) var(--ease);
+}
+.status-msg.is-warn{
+  color:#8a6318; background:#FBF0DC; border:1px solid #edd9b0;
+  border-radius:var(--r-sm); padding:9px 12px;
+}
+
+.warn{
+  background:#FBF0DC; border:1px solid #edd9b0; color:#7a5715;
+  border-radius:var(--r-md); padding:13px 15px; font-size:13.5px; line-height:1.7;
+}
+.warn strong{ color:#5f440f; }
+.warn em{ font-style:normal; font-weight:600; direction:ltr; display:inline-block; }
+
 .drop{
   border:1.5px dashed var(--border); border-radius:var(--r-md);
   padding:22px; text-align:center; color:var(--text-2); font-size:13.5px;
