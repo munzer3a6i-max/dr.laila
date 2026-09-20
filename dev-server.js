@@ -22,6 +22,37 @@ var url = require('url');
 var PORT = process.env.PORT || 3000;
 var ROOT = __dirname;
 
+/* ── .env ─────────────────────────────────────────────────
+   Load a local .env so testing does not mean exporting six
+   variables by hand every time. Real values live in the
+   hosting provider's settings; .env is git-ignored and is
+   for your machine only. No dependency — the format we need
+   is just KEY=value lines.                                  */
+(function loadEnv() {
+  var file = path.join(ROOT, '.env');
+  if (!fs.existsSync(file)) return;
+
+  fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach(function (line) {
+    var trimmed = line.trim();
+    if (!trimmed || trimmed.charAt(0) === '#') return;
+
+    var eq = trimmed.indexOf('=');
+    if (eq < 1) return;
+
+    var key = trimmed.slice(0, eq).trim();
+    var value = trimmed.slice(eq + 1).trim();
+
+    /* strip one layer of matching quotes, if present */
+    if (value.length > 1 &&
+        ((value[0] === '"' && value.slice(-1) === '"') ||
+         (value[0] === "'" && value.slice(-1) === "'"))) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = value;   /* real env wins */
+  });
+  console.log('loaded .env');
+})();
+
 var TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',

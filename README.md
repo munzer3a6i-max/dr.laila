@@ -201,6 +201,19 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
 > مفتاح `service_role` يتجاوز كل قيود الأمان. يوضع في متغيّرات البيئة على
 > الاستضافة فقط، ولا يُكتب في الكود ولا يُرفع إلى Git أبدًا.
 
+**٢ب. للتجربة على جهازك** (اختياري): أنشئي ملف `.env` في جذر المشروع وضعي
+فيه نفس المتغيّرات — `dev-server.js` يقرأه تلقائيًا. الملف مستثنى من Git
+فلن يُرفع أبدًا:
+
+```
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+CAL_API_KEY=cal_live_...
+ADMIN_PASSWORD_HASH=scrypt$...$...
+SESSION_SECRET=...
+ALLOW_INSECURE_COOKIE=true
+```
+
 **٣. كلمة مرور اللوحة**:
 
 ```bash
@@ -212,6 +225,15 @@ node scripts/hash-password.js "كلمة مرور طويلة وصعبة"
 
 **٤. في Cal.com** فعّلي **Requires confirmation** داخل كل نوع موعد. هذه هي
 الخطوة التي تجعل الحجز «مبدئيًا» حتى تؤكّديه أنتِ.
+
+### تحقّقي من الإعداد
+
+```bash
+node scripts/check-setup.js
+```
+
+يفحص كل المتغيّرات، ويتصل فعليًا بـ Supabase للتأكد من الجدول، ويخبرك بما
+ينقص — دون طباعة أي مفتاح سرّي.
 
 ### الأمان
 
