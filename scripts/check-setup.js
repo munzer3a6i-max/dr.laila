@@ -10,9 +10,12 @@
 var fs = require('fs');
 var path = require('path');
 
+var ENV_FILE = path.join(__dirname, '..', '.env');
+var ENV_FOUND = fs.existsSync(ENV_FILE);
+
 /* pick up .env the same way dev-server.js does */
 (function () {
-  var file = path.join(__dirname, '..', '.env');
+  var file = ENV_FILE;
   if (!fs.existsSync(file)) return;
   fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach(function (line) {
     var t = line.trim();
@@ -37,8 +40,84 @@ function note(text) { console.log('    ' + YEL + '→ ' + text + OFF); }
 /** Never print a secret — only whether it is there and roughly right. */
 function shape(v, n) { return v ? v.slice(0, n) + '…(' + v.length + ' chars)' : ''; }
 
+/* ── remote mode: ask a deployment about itself ───────────── */
+async function checkRemote(site) {
+  var base = site.replace(/\/+$/, '');
+  console.log('\nChecking ' + base + '\n');
+
+  var res, text, data = null;
+  try {
+    res = await fetch(base + '/api/health', { headers: { Accept: 'application/json' } });
+    text = await res.text();                 /* read as text first: a static
+                                                host answers with an HTML 404,
+                                                and .json() would throw before
+                                                we could say anything useful */
+    try { data = JSON.parse(text); } catch (e) { data = null; }
+  } catch (e) {
+    no('could not reach ' + base, e.message);
+    note('is the site deployed and is the address right?');
+    console.log('');
+    process.exit(1);
+  }
+
+  if (!data || !data.checks) {
+    var looksStatic = res.status === 404 || /^\s*</.test(text || '');
+    if (looksStatic) {
+      no('/api/health is not running', 'HTTP ' + res.status);
+      note('the site is being served as plain static files');
+      note('serverless functions are needed — GitHub Pages cannot run them');
+      note('deploy to Netlify or Vercel, or run: node dev-server.js');
+    } else {
+      no('unexpected reply from /api/health', 'HTTP ' + res.status);
+      note(String(text || '').slice(0, 120));
+    }
+    console.log('');
+    process.exit(1);
+  }
+
+  var c = data.checks;
+  console.log('Supabase');
+  if (!c.supabase.configured) {
+    no('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing on the host');
+    note('add them in your host settings, then redeploy');
+  } else {
+    ok('keys are set on the host');
+    if (c.supabase.table) ok('requests table reachable');
+    else {
+      no('cannot read the requests table');
+      note(c.supabase.problem || 'run supabase/schema.sql in the Supabase SQL editor');
+    }
+  }
+
+  console.log('\nCal.com');
+  if (c.cal.configured) ok('CAL_API_KEY is set on the host');
+  else { no('CAL_API_KEY missing on the host'); note('needed to confirm a booking when you mark it paid'); }
+
+  console.log('\nAdmin dashboard');
+  if (c.admin.configured) ok('ADMIN_PASSWORD_HASH and SESSION_SECRET are set');
+  else { no('admin variables missing on the host'); note('node scripts/hash-password.js "your password"'); }
+
+  console.log('\n' + (data.ready
+    ? GREEN + 'Everything is connected.' + OFF + '  Open ' + base + '/admin\n'
+    : RED + 'Not ready yet' + OFF + ' — fix the ✗ lines above and redeploy.\n'));
+
+  process.exit(data.ready ? 0 : 1);
+}
+
 (async function main() {
-  console.log('\nChecking setup\n');
+  var site = process.argv[2];
+  if (site) {
+    if (!/^https?:\/\//.test(site)) site = 'https://' + site;
+    return checkRemote(site);
+  }
+
+  console.log('\nChecking this machine\n');
+  console.log(DIM + '  .env: ' + (ENV_FOUND ? ENV_FILE : 'none found at ' + ENV_FILE) + OFF);
+  if (!ENV_FOUND) {
+    console.log(DIM + '  Variables set in Netlify or Vercel do NOT appear here —' + OFF);
+    console.log(DIM + '  to check a deployment run:  node scripts/check-setup.js your-site.com' + OFF);
+  }
+  console.log('');
 
   /* ── Supabase ─────────────────────────────────────────── */
   console.log('Supabase');

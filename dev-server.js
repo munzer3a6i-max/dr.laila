@@ -70,7 +70,8 @@ var TYPES = {
 var handlers = {
   '/api/slots': require('./api/slots.js'),
   '/api/request': require('./api/request.js'),
-  '/api/admin': require('./api/admin.js')
+  '/api/admin': require('./api/admin.js'),
+  '/api/health': require('./api/health.js')
 };
 
 /** Minimal Vercel-compatible res shim. */
