@@ -120,7 +120,7 @@
     var prefix = m[1], target = parseInt(m[2], 10), suffix = m[3];
     if (calm || !target) { return; }
 
-    var DURATION = 1100;
+    var DURATION = 2000;
     var started = null;
 
     function frame(now) {
