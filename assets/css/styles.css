@@ -440,6 +440,7 @@ html[lang="en"] .lang-switch__label{ font-size:15px; }
 .field input[aria-invalid="true"]{ border-color:#B3261E; }
 .field__error{ font-size:12px; color:#B3261E; min-height:0; }
 .field__error:empty{ display:none; }
+.field__hint{ font-size:12px; color:var(--muted); margin-top:-2px; }
 
 .select-wrap{ position:relative; }
 .select-wrap select{

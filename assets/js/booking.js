@@ -574,15 +574,21 @@
   function validate() {
     var problems = [];
     var name = document.getElementById('bk-name');
-    var child = document.getElementById('bk-child');
     var email = document.getElementById('bk-email');
+    var wa = document.getElementById('bk-whatsapp');
 
-    setError(name, ''); setError(child, ''); setError(email, '');
+    setError(name, ''); setError(email, ''); setError(wa, '');
 
     if (!name.value.trim()) { setError(name, T('bk.errName')); problems.push(name); }
-    if (!child.value.trim()) { setError(child, T('bk.errChild')); problems.push(child); }
     if (!email.value.trim()) { setError(email, T('bk.errEmail')); problems.push(email); }
     else if (!EMAIL.test(email.value.trim())) { setError(email, T('bk.errEmailFormat')); problems.push(email); }
+
+    /* the practice reaches people on WhatsApp to arrange payment, so this
+       matters more than the email now — 8 to 15 digits, any format */
+    var digits = wa.value.replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 15) {
+      setError(wa, T('bk.errWhatsapp')); problems.push(wa);
+    }
 
     var entry = state.date
       ? monthEntry(state.date.getFullYear(), state.date.getMonth())
@@ -647,18 +653,22 @@
     var payload = {
       start: state.time,
       name: document.getElementById('bk-name').value.trim(),
+      whatsapp: document.getElementById('bk-whatsapp').value.trim(),
+      sessionLabel: T(t.labelKey),
+      price: t.price,
+      minutes: t.minutes,
+      sessionType: t.id,
       email: document.getElementById('bk-email').value.trim(),
       child: document.getElementById('bk-child').value.trim(),
       reason: document.getElementById('bk-reason').value.trim(),
       service: T(el.service.value),
       timeZone: CONFIG.timeZone,
-      language: window.Lang ? window.Lang.current : 'ar',
-      metadata: { sessionType: t.id, price: String(t.price) }
+      language: window.Lang ? window.Lang.current : 'ar'
     };
     Object.keys(ref.body).forEach(function (k2) { payload[k2] = ref.body[k2]; });
     if (t.calLengthInMinutes) payload.lengthInMinutes = t.calLengthInMinutes;
 
-    fetch(api('book'), {
+    fetch(api('request'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload)
@@ -790,7 +800,7 @@
     el.dateInput.value = '';
     el.timeInput.value = '';
     el.formError.hidden = true;
-    ['bk-name', 'bk-child', 'bk-email'].forEach(function (id) {
+    ['bk-name', 'bk-child', 'bk-email', 'bk-whatsapp'].forEach(function (id) {
       setError(document.getElementById(id), '');
     });
     el.done.hidden = true;
@@ -800,7 +810,7 @@
     document.getElementById('booking').scrollIntoView({ block: 'start' });
   });
 
-  ['bk-name', 'bk-child', 'bk-email'].forEach(function (id) {
+  ['bk-name', 'bk-child', 'bk-email', 'bk-whatsapp'].forEach(function (id) {
     var input = document.getElementById(id);
     input.addEventListener('input', function () {
       if (input.hasAttribute('aria-invalid')) setError(input, '');

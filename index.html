@@ -359,8 +359,8 @@
           </div>
 
           <div class="field">
-            <label for="bk-child" data-i18n="booking.childLabel">اسم الطفل وعمره</label>
-            <input type="text" id="bk-child" name="child" data-i18n-placeholder="booking.childPh" placeholder="مها ، 6 سنوات" required>
+            <label for="bk-child" data-i18n="booking.childLabel">اسم الطفل وعمره (اختياري)</label>
+            <input type="text" id="bk-child" name="child" data-i18n-placeholder="booking.childPh" placeholder="مها ، 6 سنوات">
             <p class="field__error" data-error-for="bk-child"></p>
           </div>
 
@@ -368,6 +368,14 @@
             <label for="bk-email" data-i18n="booking.emailLabel">البريد الالكتروني</label>
             <input type="email" id="bk-email" name="email" placeholder="email@example.com" autocomplete="email" dir="ltr" required>
             <p class="field__error" data-error-for="bk-email"></p>
+          </div>
+
+          <div class="field">
+            <label for="bk-whatsapp" data-i18n="booking.waLabel">رقم الواتساب</label>
+            <input type="tel" id="bk-whatsapp" name="whatsapp" data-i18n-placeholder="booking.waPh"
+                   placeholder="05xxxxxxxx" autocomplete="tel" inputmode="tel" dir="ltr" required>
+            <p class="field__hint" data-i18n="booking.waHint">سنتواصل معك على هذا الرقم لترتيب الدفع</p>
+            <p class="field__error" data-error-for="bk-whatsapp"></p>
           </div>
 
           <div class="field">

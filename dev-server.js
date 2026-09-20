@@ -38,12 +38,14 @@ var TYPES = {
 
 var handlers = {
   '/api/slots': require('./api/slots.js'),
-  '/api/book': require('./api/book.js')
+  '/api/request': require('./api/request.js'),
+  '/api/admin': require('./api/admin.js')
 };
 
 /** Minimal Vercel-compatible res shim. */
 function shimRes(res) {
   res.status = function (code) { res.statusCode = code; return res; };
+  res.setHeader = res.setHeader.bind(res);
   res.json = function (obj) {
     if (!res.getHeader('Content-Type')) res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.end(JSON.stringify(obj));

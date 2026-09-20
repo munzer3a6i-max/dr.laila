@@ -1,6 +1,7 @@
-/* POST /api/book  →  /.netlify/functions/book  (see netlify.toml) */
+/* POST /api/request  →  /.netlify/functions/request */
 'use strict';
 var cal = require('../../lib/cal.js');
+var api = require('../../lib/api.js');
 
 exports.handler = async function (event) {
   var headers = cal.corsHeaders();
@@ -14,10 +15,6 @@ exports.handler = async function (event) {
   var body = {};
   try { body = JSON.parse(event.body || '{}'); } catch (e) { body = {}; }
 
-  if (!cal.configured(body)) {
-    return { statusCode: 503, headers, body: JSON.stringify({ ok: false, code: 'NOT_CONFIGURED', message: 'No Cal.com event type configured' }) };
-  }
-
-  var result = await cal.createBooking(body);
-  return { statusCode: result.ok ? 201 : (result.status || 500), headers, body: JSON.stringify(result) };
+  var out = await api.createRequest(body);
+  return { statusCode: out.status, headers, body: JSON.stringify(out.body) };
 };
