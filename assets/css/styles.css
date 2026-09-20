@@ -420,8 +420,7 @@ html[lang="en"] .lang-switch__label{ font-size:15px; }
 }
 .field:focus-within label{ color:var(--primary); transform:translateY(-1px); }
 
-.field input[type="text"],
-.field input[type="email"]{
+.field input{
   height:48px;
   width:100%;
   background:var(--white);

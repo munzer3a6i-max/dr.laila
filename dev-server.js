@@ -87,10 +87,24 @@ http.createServer(async function (req, res) {
 
   if (!file.startsWith(ROOT)) { res.statusCode = 403; res.end('Forbidden'); return; }
 
-  fs.readFile(file, function (err, buf) {
-    if (err) { res.statusCode = 404; res.end('Not found'); return; }
-    res.setHeader('Content-Type', TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream');
-    res.end(buf);
+  /* a directory serves its index.html, so /admin works as well as
+     /admin/ and /admin/index.html — same as any real static host */
+  fs.stat(file, function (statErr, stat) {
+    /* normalise /admin to /admin/ the way a real static host does */
+    if (!statErr && stat.isDirectory() && !pathname.endsWith('/')) {
+      res.statusCode = 301;
+      res.setHeader('Location', pathname + '/');
+      res.end();
+      return;
+    }
+
+    var target = (!statErr && stat.isDirectory()) ? path.join(file, 'index.html') : file;
+
+    fs.readFile(target, function (err, buf) {
+      if (err) { res.statusCode = 404; res.end('Not found'); return; }
+      res.setHeader('Content-Type', TYPES[path.extname(target).toLowerCase()] || 'application/octet-stream');
+      res.end(buf);
+    });
   });
 }).listen(PORT, function () {
   var mode = process.env.CAL_API_KEY ? 'Cal.com connected' : 'LOCAL MODE (no CAL_API_KEY)';

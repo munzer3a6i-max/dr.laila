@@ -2,6 +2,12 @@
   publish = "."
   functions = "netlify/functions"
 
+# /admin without a trailing slash should still reach the dashboard
+[[redirects]]
+  from = "/admin"
+  to = "/admin/"
+  status = 301
+
 # keep one client-side path (/api/*) whichever host this is deployed to
 [[redirects]]
   from = "/api/*"
