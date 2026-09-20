@@ -118,8 +118,11 @@
     </div>
 
     <figure class="hero__media" data-enter-self>
-      <!-- استبدل هذه الصورة بصورة حقيقية / replace with real photography -->
-      <img src="assets/images/hero.svg" data-i18n-alt="hero.imgAlt" alt="أم تحتضن طفلتها في جلسة دافئة" width="445" height="539">
+      <picture>
+        <source srcset="assets/images/hero.webp" type="image/webp">
+        <img src="assets/images/hero.jpg" data-i18n-alt="hero.imgAlt" alt="أم تحتضن طفلتها في جلسة دافئة"
+             width="445" height="539" fetchpriority="high" decoding="async">
+      </picture>
       <figcaption class="float-card">
         <span class="float-card__icon" aria-hidden="true">🌿</span>
         <span class="float-card__text">
@@ -238,8 +241,8 @@
             </svg>
           </span>
           <span class="credentials__text">
-            <strong data-i18n="about.cred1">بكلاريوس علم النفس</strong>
-            <small data-i18n="about.cred1sub">كليات بريدة الاهلية</small>
+            <strong data-i18n="about.cred1">بكالوريوس علم النفس</strong>
+            <small data-i18n="about.cred1sub">كليات عنيزة الأهلية</small>
           </span>
         </li>
         <li>
@@ -249,11 +252,46 @@
             </svg>
           </span>
           <span class="credentials__text">
-            <strong data-i18n="about.cred2">ماجستير الإرشاد النفسي</strong>
-            <small data-i18n="about.cred2sub">جامعة الملك سعود</small>
+            <strong data-i18n="about.cred2">دبلوم المستشار الأسري والتربوي</strong>
+            <small data-i18n="about.cred2sub">أكاديمية الشرق الأوسط للتدريب والتطوير</small>
+          </span>
+        </li>
+        <li>
+          <span class="credentials__badge" aria-hidden="true">
+            <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1 8.7 4.5 12.5 5 9.8 7.8l.7 3.9L7 9.9l-3.5 1.8.7-3.9L1.5 5l3.8-.5L7 1Z" stroke="#BC953E" stroke-width="1.2" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="credentials__text">
+            <strong data-i18n="about.cred3">دبلوم الكوتشينج الدولي</strong>
+            <small data-i18n="about.cred3sub">أكاديمية IDU للأعمال والتدريب</small>
+          </span>
+        </li>
+        <li>
+          <span class="credentials__badge" aria-hidden="true">
+            <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1 8.7 4.5 12.5 5 9.8 7.8l.7 3.9L7 9.9l-3.5 1.8.7-3.9L1.5 5l3.8-.5L7 1Z" stroke="#BC953E" stroke-width="1.2" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="credentials__text">
+            <strong data-i18n="about.cred4">مدربة معتمدة</strong>
+            <small data-i18n="about.cred4sub">المؤسسة العامة للتدريب التقني والمهني ووزارة التعليم</small>
           </span>
         </li>
       </ul>
+
+      <div class="cv-actions">
+        <a class="btn btn--primary" href="assets/files/cv-dalal-alosaimy.pdf" target="_blank" rel="noopener"
+           data-i18n="about.cvView">عرض السيرة الذاتية</a>
+        <a class="link-plain cv-actions__dl" href="assets/files/cv-dalal-alosaimy.pdf"
+           download="dalal-alosaimy-cv.pdf">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 2v8m0 0L5 7m3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span data-i18n="about.cvDownload">تحميل PDF</span>
+        </a>
+      </div>
     </div>
 
   </div>
