@@ -1025,6 +1025,8 @@ body.is-ready .site-header{
 
   .nav-toggle{ display:grid; }
 
+
+
   .hero__grid{ grid-template-columns:1fr; }
   .hero__content{ align-items:flex-start; }
   .hero__media{ max-width:445px; margin-inline-end:auto; }
@@ -1041,6 +1043,12 @@ body.is-ready .site-header{
 }
 
 @media (max-width:720px){
+  /* Four controls plus the logo measured 319px of a 393px row in English,
+     which reads as a toolbar rather than a header. The gold CTA is the one
+     that is already said twice on the way in — the hero opens with it and
+     the sheet closes with it — so on a phone it lives there instead. Above
+     this width the row has room to spare and would look empty without it. */
+  .header__actions .btn--gold{ display:none; }
   :root{ --gutter:20px; }
   .header__inner{ min-height:76px; }
   html{ scroll-padding-top:90px; }
@@ -1075,13 +1083,8 @@ body.is-ready .site-header{
   .hero__cta .btn, .hero__cta .link-plain{ width:100%; text-align:center; }
   .bk-col--time .slot{ min-width:0; flex:1 1 calc(50% - 5px); }
 
-  /* The header row runs out of room; English labels are wider than the
-     Arabic ones, so the logo and the gold button both shrink to fit. */
   .header__inner{ gap:8px; }
-  .header__actions{ gap:6px; }
-  .logo__img{ height:32px; }
-  .btn--gold{ padding:7px 9px; font-size:13px; }
-  .nav-toggle{ width:34px; padding-inline:5px; }
+  .header__actions{ gap:8px; }
 
   /* The three stats sit on one row. English labels are single long words
      ("certifications", "consultations") that cannot wrap, so the row keeps
@@ -1092,15 +1095,6 @@ body.is-ready .site-header{
   .stat dd{ font-size:12.5px; line-height:1.3; }
 }
 
-/* Below 360px even the shrunken header row does not fit: logo + gold CTA
-   + language pill + toggle measured 39px past a 320px viewport in English.
-   The gold CTA is the one control that is already duplicated — the menu
-   sheet ends with the same button and the hero repeats it — so it is what
-   gives way. It goes in both languages, not just the one that overflows,
-   so switching language never makes a header control appear or vanish. */
-@media (max-width:359px){
-  .header__actions .btn--gold{ display:none; }
-}
 
 /* ══════════════════════ REDUCED MOTION ══════════════════════
    Everything above is decoration. Someone who asks for less
