@@ -18,7 +18,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="assets/css/styles.css">
 <script src="assets/js/i18n.js"></script>
@@ -26,6 +26,8 @@
 <body>
 
 <a class="skip-link" href="#booking" data-i18n="a11y.skip">تخطَّ إلى الحجز</a>
+
+<div class="nav-scrim" id="nav-scrim" hidden></div>
 
 <!-- ══════════════════════════ HEADER ══════════════════════════ -->
 <header class="site-header" id="top">
@@ -41,20 +43,44 @@
       <a href="#services" data-i18n="nav.services">الخدمات</a>
       <a href="#testimonials" data-i18n="nav.testimonials">قصص العملاء</a>
       <a href="#booking" data-i18n="nav.booking">الحجز</a>
+
+      <!-- shown only inside the mobile sheet -->
+      <div class="nav__foot">
+        <a class="btn btn--primary btn--block" href="#booking" data-i18n="hero.ctaPrimary">إحجز إستشارة</a>
+        <a class="nav__wa" href="https://wa.me/966568551112" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.7-1.2A9 9 0 1 0 12 3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          </svg>
+          <span data-i18n="nav.whatsapp">تواصل عبر واتساب</span>
+        </a>
+      </div>
     </nav>
 
     <div class="header__actions">
       <a class="btn btn--gold" href="#booking" data-i18n="header.bookBtn">حجز جلسة</a>
 
-      <!-- language switch (the 32px control in the design) -->
-      <button class="lang-switch" type="button" id="lang-switch"
-              data-i18n-aria-label="header.langAria" aria-label="Switch to English">
-        <span class="lang-switch__label" id="lang-switch-label">EN</span>
-      </button>
+      <!-- language: globe + a small menu of the available languages -->
+      <div class="lang" id="lang">
+        <button class="lang__button" type="button" id="lang-button"
+                aria-haspopup="listbox" aria-expanded="false" aria-controls="lang-menu"
+                data-i18n-aria-label="header.langAria" aria-label="اللغة">
+          <svg class="lang__globe" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="8.25" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M2.75 11h16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M11 2.75c2.1 2.3 3.2 5.2 3.2 8.25S13.1 17 11 19.25C8.9 17 7.8 14.05 7.8 11S8.9 5.05 11 2.75Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          <span class="lang__code" id="lang-code">ع</span>
+          <svg class="lang__chevron" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="lang__menu" id="lang-menu" role="listbox"
+             data-i18n-aria-label="header.langAria" aria-label="اللغة"></div>
+      </div>
 
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav"
               data-i18n-aria-label="a11y.menuOpen" aria-label="فتح القائمة">
-        <span></span><span></span><span></span>
+        <span class="nav-toggle__box" aria-hidden="true"><i></i><i></i><i></i></span>
       </button>
     </div>
 

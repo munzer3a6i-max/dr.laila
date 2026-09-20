@@ -32,6 +32,8 @@
 
       'header.logoAria': 'د. دلال العصيمي — الصفحة الرئيسية',
       'header.bookBtn': 'حجز جلسة',
+      'header.langAria': 'اللغة',
+      'nav.whatsapp': 'تواصل عبر واتساب',
 
       'nav.about': 'نبذة عني',
       'nav.services': 'الخدمات',
@@ -190,6 +192,8 @@
 
       'header.logoAria': 'Dr. Dalal Al-Osaimy — home',
       'header.bookBtn': 'Book a session',
+      'header.langAria': 'Language',
+      'nav.whatsapp': 'Message us on WhatsApp',
 
       'nav.about': 'About me',
       'nav.services': 'Services',
@@ -421,6 +425,10 @@
     get current() { return current; },
     get dir() { return DICT[current].dir; },
     nameOf: function (code) { return DICT[code] ? DICT[code].name : code; },
+    /** Every language the site speaks, for building a picker. */
+    codes: function () { return ORDER.slice(); },
+    /** Short label for the globe button: ع / EN */
+    shortOf: function (code) { return code === 'ar' ? 'ع' : code.toUpperCase(); },
     /** Register a callback fired on every language change (and once at boot). */
     onChange: function (fn) { listeners.push(fn); },
     apply: apply

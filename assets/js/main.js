@@ -15,46 +15,151 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  /* ── language switch ────────────────────────────────────── */
-  var langBtn = document.getElementById('lang-switch');
-  var langLabel = document.getElementById('lang-switch-label');
+  /* ── language menu ──────────────────────────────────────
+     A globe that opens a list of the languages the site speaks,
+     rather than a button that silently toggles between two.   */
+  var lang = document.getElementById('lang');
+  var langBtn = document.getElementById('lang-button');
+  var langMenu = document.getElementById('lang-menu');
+  var langCode = document.getElementById('lang-code');
 
-  function paintLangButton() {
-    if (!window.Lang || !langBtn) return;
-    var target = window.Lang.next();
-    /* show, and announce, the language you would switch TO */
-    langLabel.textContent = target === 'ar' ? 'ع' : 'EN';
-    langLabel.lang = target;
-    langBtn.setAttribute('lang', target);
-    langBtn.setAttribute(
-      'aria-label',
-      target === 'ar' ? 'التبديل إلى العربية' : 'Switch to English'
-    );
+  function tick() {
+    return '<svg class="lang__tick" viewBox="0 0 14 14" fill="none" aria-hidden="true">' +
+           '<path d="M2.5 7.5 5.5 10.5 11.5 4" stroke="currentColor" stroke-width="1.6" ' +
+           'stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
 
-  if (langBtn && window.Lang) {
-    langBtn.addEventListener('click', function () { window.Lang.set(window.Lang.next()); });
-    window.Lang.onChange(paintLangButton);
-    paintLangButton();
+  function buildLangMenu() {
+    if (!langMenu || !window.Lang) return;
+    var current = window.Lang.current;
+
+    langMenu.innerHTML = window.Lang.codes().map(function (code) {
+      return '<button class="lang__option" type="button" role="option" lang="' + code + '"' +
+             ' data-lang="' + code + '" aria-selected="' + (code === current) + '">' +
+             '<span class="lang__name">' + window.Lang.nameOf(code) + '</span>' + tick() +
+             '</button>';
+    }).join('');
+
+    langCode.textContent = window.Lang.shortOf(current);
+    langCode.lang = current;
   }
 
-  /* ── mobile nav ─────────────────────────────────────────── */
+  function closeLang(refocus) {
+    if (!lang || !lang.classList.contains('is-open')) return;
+    lang.classList.remove('is-open');
+    langBtn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('mousedown', outsideLang, true);
+    if (refocus) langBtn.focus();
+  }
+
+  function outsideLang(e) { if (!lang.contains(e.target)) closeLang(false); }
+
+  function langOptions() {
+    return Array.prototype.slice.call(langMenu.querySelectorAll('[data-lang]'));
+  }
+
+  function openLang() {
+    if (!lang || lang.classList.contains('is-open')) return;
+    lang.classList.add('is-open');
+    langBtn.setAttribute('aria-expanded', 'true');
+    document.addEventListener('mousedown', outsideLang, true);
+
+    /* The panel starts at visibility:hidden and only becomes visible once
+       the browser has drawn a frame with .is-open on it — and a hidden
+       element refuses focus. Focusing in this tick silently does nothing,
+       which left the keyboard stranded on the trigger, so wait a frame. */
+    window.requestAnimationFrame(function () {
+      if (!lang.classList.contains('is-open')) return;
+      var first = langMenu.querySelector('[aria-selected="true"]') || langOptions()[0];
+      if (first) first.focus();
+    });
+  }
+
+  if (lang && window.Lang) {
+    buildLangMenu();
+
+    langBtn.addEventListener('click', function () {
+      lang.classList.contains('is-open') ? closeLang(false) : openLang();
+    });
+
+    langMenu.addEventListener('click', function (e) {
+      var opt = e.target.closest('[data-lang]');
+      if (!opt) return;
+      closeLang(true);
+      window.Lang.set(opt.dataset.lang);
+    });
+
+    /* One handler for the whole control. Focus can legitimately sit on the
+       trigger or on an option, and Escape has to close either way. */
+    lang.addEventListener('keydown', function (e) {
+      var open = lang.classList.contains('is-open');
+      var options = langOptions();
+      var i = options.indexOf(document.activeElement);
+
+      if (e.key === 'Escape') {
+        if (!open) return;
+        e.preventDefault(); closeLang(true);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (!open) return openLang();
+        (options[i + 1] || options[0]).focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!open) return openLang();
+        (i < 0 ? options[options.length - 1] : options[i - 1] || options[options.length - 1]).focus();
+      } else if ((e.key === 'Enter' || e.key === ' ') && !open && document.activeElement === langBtn) {
+        e.preventDefault(); openLang();
+      } else if (e.key === 'Tab' && open) {
+        closeLang(false);
+      }
+    });
+
+    window.Lang.onChange(buildLangMenu);
+  }
+
+  /* ── mobile menu ────────────────────────────────────────── */
+  var scrim = document.getElementById('nav-scrim');
+
   function navLabel(open) {
     return window.Lang
       ? window.Lang.t(open ? 'a11y.menuClose' : 'a11y.menuOpen')
       : (open ? 'إغلاق القائمة' : 'فتح القائمة');
   }
 
-  function closeNav() {
-    nav.classList.remove('is-open');
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.setAttribute('aria-label', navLabel(false));
-  }
+  /* each row knows its place in the queue, so CSS can stagger them */
+  Array.prototype.forEach.call(nav.children, function (n, i) { n.style.setProperty('--i', i); });
 
-  toggle.addEventListener('click', function () {
-    var open = nav.classList.toggle('is-open');
+  function setNav(open) {
+    nav.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-label', navLabel(open));
+
+    /* stop the page scrolling underneath the sheet */
+    document.body.classList.toggle('nav-open', open);
+
+    if (scrim) {
+      if (open) {
+        scrim.hidden = false;
+        /* next frame, so the fade actually runs */
+        window.requestAnimationFrame(function () { scrim.classList.add('is-on'); });
+      } else {
+        scrim.classList.remove('is-on');
+        window.setTimeout(function () { if (!nav.classList.contains('is-open')) scrim.hidden = true; }, 420);
+      }
+    }
+  }
+
+  function closeNav() { if (nav.classList.contains('is-open')) setNav(false); }
+
+  toggle.addEventListener('click', function () {
+    setNav(!nav.classList.contains('is-open'));
+  });
+
+  if (scrim) scrim.addEventListener('click', closeNav);
+
+  /* a resize back to desktop should not leave the page locked */
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 900) closeNav();
   });
 
   nav.addEventListener('click', function (e) {
