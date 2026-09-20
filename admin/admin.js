@@ -67,7 +67,18 @@
   };
 
   function errorText(json) {
-    return (json && MSG[json.code]) || (json && json.message) || 'حدث خطأ غير متوقّع';
+    if (!json) return 'حدث خطأ غير متوقّع';
+
+    /* A server that is missing variables should say which ones, in plain
+       sight, rather than leaving you reading network logs. */
+    if (json.code === 'NOT_CONFIGURED' && json.missing && json.missing.length) {
+      return 'الخادم ينقصه: ' + json.missing.join('، ') +
+             ' — أضفها في إعدادات الاستضافة ثم أعد النشر.';
+    }
+    if (json.code === 'BAD_HASH') {
+      return 'قيمة ADMIN_PASSWORD_HASH غير صحيحة الشكل. انسخي السطر كاملًا كما طبعه السكربت.';
+    }
+    return MSG[json.code] || json.message || 'حدث خطأ غير متوقّع';
   }
 
   function say(message, isError) {
@@ -366,7 +377,20 @@
 
   /* ── boot ──────────────────────────────────────────────── */
   call('session', {}).then(function (out) {
-    if (out.json && out.json.authed) showApp();
-    else showGate();
-  }).catch(showGate);
+    if (out.json && out.json.authed) { showApp(); return; }
+
+    showGate();
+    /* If the server is not configured, say so here — otherwise the only
+       clue is a 503 in the browser console. */
+    if (out.status === 503) {
+      el.loginError.textContent = errorText(out.json);
+      el.loginError.hidden = false;
+      el.pw.disabled = true;
+      el.loginBtn.disabled = true;
+    }
+  }).catch(function () {
+    showGate();
+    el.loginError.textContent = 'تعذّر الاتصال بالخادم.';
+    el.loginError.hidden = false;
+  });
 })();
