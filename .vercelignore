@@ -1,0 +1,8 @@
+# Kept out of the deployment — not part of the running site.
+# lib/ must stay: the functions in api/ require it.
+netlify/
+scripts/
+supabase/
+dev-server.js
+README.md
+.env.example

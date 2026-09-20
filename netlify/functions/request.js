@@ -9,7 +9,9 @@ exports.handler = async function (event) {
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ ok: false, message: 'Method not allowed' }) };
+    return { statusCode: 405, headers, body: JSON.stringify({ ok: false,
+      message: 'This endpoint accepts POST only — you are seeing this because a browser sent a GET.',
+      hint: 'The booking form is on the home page. To check the deployment, open /api/health.', healthy: true }) };
   }
 
   var body = {};
