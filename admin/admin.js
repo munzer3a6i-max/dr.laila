@@ -64,7 +64,8 @@
     UNAUTHENTICATED: 'انتهت الجلسة. سجّل الدخول من جديد.',
     NOT_CONFIGURED:  'الإعدادات غير مكتملة على الخادم.',
     CONFIRM_FAILED:  'تعذّر تثبيت الحجز في التقويم — لم تتغيّر الحالة.',
-    CAL_NOT_CONFIGURED: 'CAL_API_KEY غير مضبوط على الخادم — أضيفيه في إعدادات الاستضافة ثم أعيدي النشر.'
+    CAL_NOT_CONFIGURED: 'CAL_API_KEY غير مضبوط على الخادم — أضيفيه في إعدادات الاستضافة ثم أعيدي النشر.',
+    BOOKING_CANCELLED: 'هذا الحجز ملغي في Cal.com ولا يمكن تثبيته.'
   };
 
   function errorText(json) {
@@ -78,6 +79,10 @@
     }
     if (json.code === 'BAD_HASH') {
       return 'قيمة ADMIN_PASSWORD_HASH غير صحيحة الشكل. انسخي السطر كاملًا كما طبعه السكربت.';
+    }
+    /* Keep Cal.com's own wording — the generic line alone leaves you guessing. */
+    if (json.code === 'CONFIRM_FAILED' && json.detail) {
+      return MSG.CONFIRM_FAILED + ' (' + json.detail + ')';
     }
     return MSG[json.code] || json.message || 'حدث خطأ غير متوقّع';
   }

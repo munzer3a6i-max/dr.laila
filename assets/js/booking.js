@@ -54,10 +54,11 @@
        summary. The real duration is whatever the Cal.com event type
        is set to, so keep them in step.                           */
     sessionTypes: [
-      /* ⚠ TEST WIRING — points at a 15-minute test event, so Cal.com will
-         book 15 minutes while the summary still reads 50. Swap the slug
-         for the real "جلسة تعريفية" event type and this lines up.      */
-      { id: 'intro',      labelKey: 'type.intro',      minutes: 50, price: 100, calEventSlug: '15min', calEventTypeId: null },
+      /* ⚠ TEST WIRING — points at the "secret" event type, which is the one
+         with Requires confirmation switched on. Its real length may differ
+         from the 50 minutes shown in the summary; swap the slug for the
+         proper "جلسة تعريفية" event type once it exists.                */
+      { id: 'intro',      labelKey: 'type.intro',      minutes: 50, price: 100, calEventSlug: 'secret', calEventTypeId: null },
 
       { id: 'individual', labelKey: 'type.individual', minutes: 60, price: 250, calEventSlug: null, calEventTypeId: null },
       { id: 'family',     labelKey: 'type.family',     minutes: 90, price: 350, calEventSlug: null, calEventTypeId: null },
