@@ -347,7 +347,11 @@
   var current = pickInitial();
   var listeners = [];
 
-  /* Set direction before first paint — no flash of the wrong layout. */
+  /* Set direction before first paint — no flash of the wrong layout.
+     Dropping `no-js` here (a blocking head script) hands the entrance
+     animations over to CSS; if scripting is off the class stays and
+     everything is simply shown. */
+  document.documentElement.classList.remove('no-js');
   document.documentElement.lang = current;
   document.documentElement.dir = DICT[current].dir;
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="no-js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -67,7 +67,7 @@
 <section class="hero" aria-labelledby="hero-title">
   <div class="container hero__grid">
 
-    <div class="hero__content reveal">
+    <div class="hero__content" data-enter>
       <p class="pill">
         <span data-i18n="hero.pill">علم نفس الطفل والمراهق</span>
         <span class="pill__dot" aria-hidden="true"></span>
@@ -91,7 +91,7 @@
       </dl>
     </div>
 
-    <figure class="hero__media reveal">
+    <figure class="hero__media" data-enter-self>
       <!-- استبدل هذه الصورة بصورة حقيقية / replace with real photography -->
       <img src="assets/images/hero.svg" data-i18n-alt="hero.imgAlt" alt="أم تحتضن طفلتها في جلسة دافئة" width="445" height="539">
       <figcaption class="float-card">
@@ -112,40 +112,40 @@
   <span class="sprig sprig--b" aria-hidden="true"></span>
 
   <div class="container">
-    <header class="section-head reveal">
+    <header class="section-head reveal" data-stagger>
       <p class="eyebrow" data-i18n="services.eyebrow">ما أقدمه</p>
       <h2 id="services-title" data-i18n="services.title">خدمات مصممة خصيصاً لكل مرحلة</h2>
     </header>
 
-    <ul class="services__grid" role="list">
+    <ul class="services__grid reveal" data-stagger role="list">
 
-      <li class="card reveal">
+      <li class="card">
         <span class="card__icon" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 6c-4.4 0-8 3.4-8 7.6 0 2.4 1.1 4.5 2.9 5.9V24a2 2 0 0 0 2 2h6.2a2 2 0 0 0 2-2v-4.5c1.8-1.4 2.9-3.5 2.9-5.9C24 9.4 20.4 6 16 6Z" stroke="#1A5038" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M13 26v1.5M19 26v1.5M13.5 20h5" stroke="#1A5038" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M16 6c-4.4 0-8 3.4-8 7.6 0 2.4 1.1 4.5 2.9 5.9V24a2 2 0 0 0 2 2h6.2a2 2 0 0 0 2-2v-4.5c1.8-1.4 2.9-3.5 2.9-5.9C24 9.4 20.4 6 16 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M13 26v1.5M19 26v1.5M13.5 20h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
         </span>
         <h3 data-i18n="services.s1title">استشارات القلق والمخاوف والوسواس</h3>
         <p data-i18n="services.s1body">نساعدك على فهم القلق والمخاوف والأفكار المتكررة، وتطوير استراتيجيات عملية لاستعادة الهدوء والشعور بالأمان في حياتك اليومية.</p>
       </li>
 
-      <li class="card reveal">
+      <li class="card">
         <span class="card__icon" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 17h4l2.5-6 4 13 3-9 2 2h6.5" stroke="#1A5038" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M16 27c5.5-3.6 10-7 10-11.4A5.6 5.6 0 0 0 16 12a5.6 5.6 0 0 0-10 3.6" stroke="#1A5038" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>
+            <path d="M5 17h4l2.5-6 4 13 3-9 2 2h6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M16 27c5.5-3.6 10-7 10-11.4A5.6 5.6 0 0 0 16 12a5.6 5.6 0 0 0-10 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>
           </svg>
         </span>
         <h3 data-i18n="services.s2title">خدمات الصحة النفسية والمزاجية</h3>
         <p data-i18n="services.s2body">نقدم دعمًا نفسيًا متخصصًا للتعامل مع الاكتئاب، وتقلبات المزاج، والإدمان، واضطرابات النوم، والاحتراق الوظيفي، وغيرها من التحديات النفسية.</p>
       </li>
 
-      <li class="card reveal">
+      <li class="card">
         <span class="card__icon" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="16" cy="11" r="4.5" stroke="#1A5038" stroke-width="1.8"/>
-            <path d="M7 26c0-4.4 4-7.5 9-7.5s9 3.1 9 7.5" stroke="#1A5038" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="16" cy="11" r="4.5" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M7 26c0-4.4 4-7.5 9-7.5s9 3.1 9 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             <path d="M23.5 6.5 26 4M25 11h3M8.5 6.5 6 4M7 11H4" stroke="#BC953E" stroke-width="1.6" stroke-linecap="round"/>
           </svg>
         </span>
@@ -153,10 +153,10 @@
         <p data-i18n="services.s3body">نساعدك على فهم أنماط التفكير والسلوك والتعامل مع الآخرين، وبناء مهارات أكثر توازنًا لتحسين العلاقات وجودة الحياة.</p>
       </li>
 
-      <li class="card reveal">
+      <li class="card">
         <span class="card__icon" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 27C10 23 5.5 19.6 5.5 15.2A5.2 5.2 0 0 1 16 12.6a5.2 5.2 0 0 1 10.5 2.6C26.5 19.6 22 23 16 27Z" stroke="#1A5038" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M16 27C10 23 5.5 19.6 5.5 15.2A5.2 5.2 0 0 1 16 12.6a5.2 5.2 0 0 1 10.5 2.6C26.5 19.6 22 23 16 27Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
             <path d="M16 12.6V27" stroke="#BC953E" stroke-width="1.6" stroke-dasharray="2.5 2.5"/>
           </svg>
         </span>
@@ -164,13 +164,13 @@
         <p data-i18n="services.s4body">نوفر إرشادًا يساعد الأزواج على تحسين التواصل، وإدارة الخلافات، واستعادة الثقة والمودة، واتخاذ قرارات واعية بشأن مستقبل العلاقة.</p>
       </li>
 
-      <li class="card reveal">
+      <li class="card">
         <span class="card__icon" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="11" cy="11" r="3.5" stroke="#1A5038" stroke-width="1.8"/>
-            <circle cx="21.5" cy="13.5" r="2.8" stroke="#1A5038" stroke-width="1.8"/>
-            <path d="M4.5 25c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="#1A5038" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M18.5 25c0-3 2-4.8 4.7-4.8 2.2 0 4.3 1.3 4.3 4.8" stroke="#1A5038" stroke-width="1.8" stroke-linecap="round" opacity=".55"/>
+            <circle cx="11" cy="11" r="3.5" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="21.5" cy="13.5" r="2.8" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M4.5 25c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M18.5 25c0-3 2-4.8 4.7-4.8 2.2 0 4.3 1.3 4.3 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".55"/>
           </svg>
         </span>
         <h3 data-i18n="services.s5title">استشارات الأطفال والمراهقين</h3>
@@ -193,7 +193,7 @@
       </figcaption>
     </figure>
 
-    <div class="about__content reveal">
+    <div class="about__content reveal" data-stagger>
       <header class="section-head section-head--flush">
         <p class="eyebrow" data-i18n="about.eyebrow">نبذة عني</p>
         <h2 id="about-title" data-i18n="about.title">أؤمن بأن لكل طفل الحق في أن يشعر بأن صوته مسموع</h2>
@@ -236,14 +236,14 @@
 <!-- ══════════════════════════ TESTIMONIALS ══════════════════════════ -->
 <section class="testimonials" id="testimonials" aria-labelledby="testimonials-title">
   <div class="container">
-    <header class="section-head reveal">
+    <header class="section-head reveal" data-stagger>
       <p class="eyebrow" data-i18n="testimonials.eyebrow">قصص العملاء</p>
       <h2 id="testimonials-title" data-i18n="testimonials.title">ما تقوله العائلات</h2>
     </header>
 
-    <ul class="testimonials__grid" role="list">
+    <ul class="testimonials__grid reveal" data-stagger role="list">
 
-      <li class="quote reveal">
+      <li class="quote">
         <div class="stars" role="img" data-i18n-aria-label="testimonials.starsAria" aria-label="تقييم 5 من 5"><span></span><span></span><span></span><span></span><span></span></div>
         <blockquote data-i18n="testimonials.q1">“دعمها النفسي لابنتي كان له تأثير إيجابي ملحوظ، حيث أصبحت أكثر ثقة في نفسها.”</blockquote>
         <hr class="rule">
@@ -253,7 +253,7 @@
         </figure>
       </li>
 
-      <li class="quote reveal">
+      <li class="quote">
         <div class="stars" role="img" data-i18n-aria-label="testimonials.starsAria" aria-label="تقييم 5 من 5"><span></span><span></span><span></span><span></span><span></span></div>
         <blockquote data-i18n="testimonials.q2">“ساعدتني جلساتنا في فهم مشاعر ابني بشكل أفضل، وأصبح أكثر انفتاحًا في التعبير عن نفسه.”</blockquote>
         <hr class="rule">
@@ -263,7 +263,7 @@
         </figure>
       </li>
 
-      <li class="quote reveal">
+      <li class="quote">
         <div class="stars" role="img" data-i18n-aria-label="testimonials.starsAria" aria-label="تقييم 5 من 5"><span></span><span></span><span></span><span></span><span></span></div>
         <blockquote data-i18n="testimonials.q3">“استراتيجيات اللعب التفاعلي لتنمية المهارات الاجتماعية لدى الأطفال، بما يعزز التواصل الفعّال والعلاقات الصحية.”</blockquote>
         <hr class="rule">
@@ -283,13 +283,13 @@
   <span class="sprig sprig--d" aria-hidden="true"></span>
 
   <div class="container">
-    <header class="section-head reveal">
+    <header class="section-head reveal" data-stagger>
       <p class="eyebrow" data-i18n="booking.eyebrow">الحجز</p>
       <h2 id="booking-title" data-i18n="booking.title">احجز موعد استشارتك</h2>
       <p class="section-head__note" data-i18n="booking.note">اختر التاريخ والوقت الأنسب لعائلتك. مدة الاستشارة الأولى 50 دقيقة.</p>
     </header>
 
-    <form class="booking__grid" id="booking-form" novalidate>
+    <form class="booking__grid reveal" id="booking-form" data-stagger novalidate>
 
       <!-- ── 1. نوع الجلسة ─────────────────────────── -->
       <div class="bk-col bk-col--type">
@@ -399,8 +399,8 @@
     <div class="booking__done" id="booking-done" hidden>
       <span class="booking__done-icon" aria-hidden="true">
         <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="24" cy="24" r="22" stroke="#1A5038" stroke-width="2"/>
-          <path d="m14 24.5 7 7L34 17" stroke="#1A5038" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle class="done-ring" pathLength="1" cx="24" cy="24" r="22" stroke="#1A5038" stroke-width="2"/>
+          <path class="done-tick" pathLength="1" d="m14 24.5 7 7L34 17" stroke="#1A5038" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
       <h3 data-i18n="booking.doneTitle">تم تأكيد حجزك</h3>
@@ -418,7 +418,7 @@
 <footer class="site-footer">
   <div class="container">
 
-    <div class="footer__top">
+    <div class="footer__top reveal" data-stagger>
 
       <div class="footer__brand">
         <img class="footer__mark" src="assets/images/footerlogo.png"

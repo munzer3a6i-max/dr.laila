@@ -446,6 +446,7 @@
         btn.tabIndex = isFocus ? 0 : -1;
         if (isFocus) anyFocusable = true;
       }
+      btn.style.setProperty('--i', i);
       frag.appendChild(btn);
     }
 
@@ -501,12 +502,13 @@
     }
 
     var frag = document.createDocumentFragment();
-    list.forEach(function (iso) {
+    list.forEach(function (iso, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'slot';
       b.textContent = formatTime(iso);
       b.dataset.slot = iso;
+      b.style.setProperty('--i', i);
       b.setAttribute('aria-pressed', state.time === iso ? 'true' : 'false');
       if (state.time === iso) b.classList.add('is-selected');
       frag.appendChild(b);
@@ -517,16 +519,28 @@
     el.tzNote.hidden = false;
   }
 
+  var lastSummary = '';
   function renderSummary() {
     var t = currentType();
     var parts = [T(t.labelKey)];
     if (state.date) parts.push(formatDay(state.date));
     if (state.time) parts.push(formatTime(state.time));
 
-    el.sumMain.textContent = state.date || state.time
-      ? parts.join(' · ')
-      : T(t.labelKey);
-    el.sumMeta.textContent = formatDuration(t.minutes) + ' · ' + formatPrice(t.price);
+    var main = state.date || state.time ? parts.join(' · ') : T(t.labelKey);
+    var meta = formatDuration(t.minutes) + ' · ' + formatPrice(t.price);
+
+    el.sumMain.textContent = main;
+    el.sumMeta.textContent = meta;
+
+    /* nod only on a real change, so it does not twitch on every render */
+    var summary = main + '|' + meta;
+    if (lastSummary && summary !== lastSummary) {
+      var box = document.getElementById('bk-summary');
+      box.classList.remove('is-updated');
+      void box.offsetWidth;                 /* restart the animation */
+      box.classList.add('is-updated');
+    }
+    lastSummary = summary;
   }
 
   function render() {
@@ -685,6 +699,18 @@
     refresh();
   });
 
+  /** Repaint which cell looks chosen without rebuilding the grid — a full
+      re-render would replay the entrance animation on all 42 cells. */
+  function markSelectedDay(btn) {
+    var all = el.calGrid.querySelectorAll('.cal-day'), i;
+    for (i = 0; i < all.length; i++) {
+      var on = all[i] === btn;
+      all[i].classList.toggle('is-selected', on);
+      if (!all[i].disabled) all[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      all[i].tabIndex = on ? 0 : -1;
+    }
+  }
+
   el.calGrid.addEventListener('click', function (e) {
     var btn = e.target.closest('.cal-day');
     if (!btn || btn.disabled) return;
@@ -695,7 +721,10 @@
     el.dateInput.value = btn.dataset.date;
     el.timeInput.value = '';
     el.formError.hidden = true;
-    render();
+
+    markSelectedDay(btn);
+    renderSlots();
+    renderSummary();
   });
 
   el.calGrid.addEventListener('keydown', function (e) {
@@ -726,10 +755,18 @@
   el.slots.addEventListener('click', function (e) {
     var btn = e.target.closest('.slot');
     if (!btn || btn.disabled) return;
+
     state.time = btn.dataset.slot;
     el.timeInput.value = state.time;
     el.formError.hidden = true;
-    renderSlots();
+
+    /* in place, so the other slots do not replay their entrance */
+    var all = el.slots.querySelectorAll('.slot'), i;
+    for (i = 0; i < all.length; i++) {
+      var on = all[i] === btn;
+      all[i].classList.toggle('is-selected', on);
+      all[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
     renderSummary();
   });
 

@@ -74,6 +74,25 @@
     closeNav();
   });
 
+  /* ── motion ─────────────────────────────────────────────
+     CSS owns the animation; JS only decides when it starts and
+     hands each child its position in the queue.                */
+  var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* index every staggered child so CSS can offset its delay */
+  function indexChildren(container) {
+    var kids = container.children, i;
+    for (i = 0; i < kids.length; i++) kids[i].style.setProperty('--i', i);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-stagger], [data-enter]'), indexChildren);
+
+  /* the hero and header come in on load, not on scroll */
+  function ready() { document.body.classList.add('is-ready'); }
+  if (document.readyState === 'complete') ready();
+  else window.addEventListener('load', ready);
+  /* belt and braces: never leave the hero invisible if load is slow */
+  window.setTimeout(ready, 1200);
+
   /* ── scroll reveal ──────────────────────────────────────── */
   var items = document.querySelectorAll('.reveal');
 
@@ -88,10 +107,44 @@
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 
-    Array.prototype.forEach.call(items, function (n, i) {
-      n.style.transitionDelay = Math.min(i % 5, 4) * 70 + 'ms';
-      io.observe(n);
-    });
+    Array.prototype.forEach.call(items, function (n) { io.observe(n); });
+  }
+
+  /* ── stat counters ──────────────────────────────────────
+     "+400" counts up the first time it scrolls into view.    */
+  function countUp(el) {
+    var raw = el.textContent.trim();
+    var m = raw.match(/^(\D*)(\d+)(\D*)$/);
+    if (!m) return;
+
+    var prefix = m[1], target = parseInt(m[2], 10), suffix = m[3];
+    if (calm || !target) { return; }
+
+    var DURATION = 1100;
+    var started = null;
+
+    function frame(now) {
+      if (started === null) started = now;
+      var t = Math.min((now - started) / DURATION, 1);
+      var eased = 1 - Math.pow(1 - t, 3);          /* ease-out cubic */
+      el.textContent = prefix + Math.round(target * eased) + suffix;
+      if (t < 1) window.requestAnimationFrame(frame);
+    }
+
+    el.textContent = prefix + '0' + suffix;
+    window.requestAnimationFrame(frame);
+  }
+
+  var stats = document.querySelectorAll('.stat dt');
+  if (stats.length && 'IntersectionObserver' in window && window.requestAnimationFrame) {
+    var statIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        countUp(entry.target);
+        statIO.unobserve(entry.target);
+      });
+    }, { threshold: 0.6 });
+    Array.prototype.forEach.call(stats, function (n) { statIO.observe(n); });
   }
 
   /* ── scroll-spy on the nav ──────────────────────────────── */
