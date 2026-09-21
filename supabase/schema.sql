@@ -43,6 +43,13 @@ create index if not exists requests_status_idx  on public.requests (status);
 create index if not exists requests_created_idx on public.requests (created_at desc);
 create index if not exists requests_starts_idx  on public.requests (starts_at);
 
+-- The server refuses a request that overlaps a live one, but two forms
+-- submitted in the same second can both pass that check. This makes the
+-- database the last word on the common case — the same start time twice.
+-- A cancelled request frees its slot, so it is excluded.
+create unique index if not exists requests_slot_unique
+  on public.requests (starts_at) where status <> 'cancelled';
+
 -- keep updated_at honest
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
