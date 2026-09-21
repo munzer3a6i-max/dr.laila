@@ -25,6 +25,16 @@ module.exports = async function handler(req, res) {
 
   if (!result.ok) return res.status(result.status || 500).json(result);
 
+  /* Report the length Cal.com will actually reserve, so the page can quote
+     that instead of the figure hardcoded beside each session type. A failed
+     lookup is not fatal — the page falls back to its own number. */
+  var type = await cal.getEventType({
+    eventTypeId: q.eventTypeId,
+    eventTypeSlug: q.eventTypeSlug,
+    username: q.username
+  });
+  if (type.ok && type.lengthInMinutes) result.lengthInMinutes = type.lengthInMinutes;
+
   /* short cache: availability moves, but not second to second */
   res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=30');
   return res.status(200).json(result);

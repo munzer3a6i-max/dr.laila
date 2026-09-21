@@ -225,6 +225,25 @@
     return null;
   }
 
+  /* Nothing the site sends to Cal.com carries a length: the event type's
+     own setting decides both how the slots are spaced and how much of the
+     calendar a booking consumes. The table above only says what to PRINT,
+     so if the two drift the page advertises a session the calendar will
+     not reserve. /api/slots reports the real figure; prefer it. */
+  var liveMinutes = Object.create(null);
+
+  function minutesOf(type) {
+    var ref = eventRef(type);
+    var live = ref && liveMinutes[ref.key];
+    return live || type.minutes;
+  }
+
+  function noteLength(ref, minutes) {
+    if (!ref || !minutes || liveMinutes[ref.key] === minutes) return false;
+    liveMinutes[ref.key] = minutes;
+    return true;                       /* caller re-renders the labels */
+  }
+
   function monthKey(y, m) {
     var ref = eventRef(currentType());
     return (ref ? ref.key : 'local') + '|' + y + '-' + m;
@@ -337,6 +356,7 @@
         } else {
           entry.status = 'ready';
           entry.byDate = groupByDate(out.json.slots || []);
+          if (noteLength(ref, out.json.lengthInMinutes)) buildSelects();
         }
         render();
       })
@@ -390,7 +410,7 @@
     CONFIG.sessionTypes.forEach(function (t) {
       var o = document.createElement('option');
       o.value = t.id;
-      o.textContent = T(t.labelKey) + ' — ' + formatDuration(t.minutes) + ' · ' + formatPrice(t.price);
+      o.textContent = T(t.labelKey) + ' — ' + formatDuration(minutesOf(t)) + ' · ' + formatPrice(t.price);
       el.type.appendChild(o);
     });
     if (prevType) el.type.value = prevType;
@@ -528,7 +548,7 @@
     if (state.time) parts.push(formatTime(state.time));
 
     var main = state.date || state.time ? parts.join(' · ') : T(t.labelKey);
-    var meta = formatDuration(t.minutes) + ' · ' + formatPrice(t.price);
+    var meta = formatDuration(minutesOf(t)) + ' · ' + formatPrice(t.price);
 
     el.sumMain.textContent = main;
     el.sumMeta.textContent = meta;
@@ -657,7 +677,7 @@
       whatsapp: document.getElementById('bk-whatsapp').value.trim(),
       sessionLabel: T(t.labelKey),
       price: t.price,
-      minutes: t.minutes,
+      minutes: minutesOf(t),
       sessionType: t.id,
       email: document.getElementById('bk-email').value.trim(),
       child: document.getElementById('bk-child').value.trim(),

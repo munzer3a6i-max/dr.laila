@@ -25,6 +25,15 @@ exports.handler = async function (event) {
     timeZone: q.timeZone
   });
 
-  if (result.ok) headers['Cache-Control'] = 'public, max-age=30';
+  /* Report the length Cal.com will actually reserve — see api/slots.js. */
+  if (result.ok) {
+    var type = await cal.getEventType({
+      eventTypeId: q.eventTypeId,
+      eventTypeSlug: q.eventTypeSlug,
+      username: q.username
+    });
+    if (type.ok && type.lengthInMinutes) result.lengthInMinutes = type.lengthInMinutes;
+    headers['Cache-Control'] = 'public, max-age=30';
+  }
   return { statusCode: result.ok ? 200 : (result.status || 500), headers, body: JSON.stringify(result) };
 };
