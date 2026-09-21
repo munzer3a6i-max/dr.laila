@@ -68,6 +68,33 @@
     BOOKING_CANCELLED: 'هذا الحجز ملغي في Cal.com ولا يمكن تثبيته.'
   };
 
+  /* A status change touches two things: this row, and Cal.com. Reporting
+     only the first is what let "مدفوع" look successful while the meeting
+     stayed unconfirmed and its time stayed on offer. */
+  function statusResultText(picked, calendar) {
+    var base = 'تم تحديث الحالة إلى «' + STATUS[picked] + '»';
+    if (calendar === 'confirmed') return base + ' — وثُبّت الحجز في التقويم.';
+    if (calendar === 'already')   return base + ' — الحجز مثبّت في التقويم أصلًا.';
+    if (calendar === 'cancelled') return base + ' — وأُلغي الحجز في التقويم.';
+    if (calendar === 'cancel-failed') {
+      return base + ' — لكن لم يُلغَ الحجز في التقويم. تحقّقي منه يدويًا.';
+    }
+    if (calendar === 'none') {
+      return base + '، لكن لا يوجد حجز مرتبط بهذا الطلب في Cal.com — لم يتغيّر التقويم ' +
+             'ووقت الجلسة ما زال معروضًا. احجزيه يدويًا من Cal.com.';
+    }
+    return base;
+  }
+
+  /* Paid says the money arrived; only cal_status says the calendar agrees.
+     Written once because it is rendered from two places. */
+  function paidLine(r) {
+    return (r.cal_status === 'accepted'
+              ? 'الحجز مثبَّت في التقويم'
+              : 'مدفوع، لكن الحجز غير مثبّت في التقويم')
+         + (r.paid_at ? ' — ' + fmtAgo(r.paid_at) : '');
+  }
+
   function errorText(json) {
     if (!json) return 'حدث خطأ غير متوقّع';
 
@@ -190,8 +217,28 @@
     );
 
     var autoAccepted = r.cal_status === 'accepted' && r.status !== 'paid';
+    var unlinked = !r.cal_booking_uid;
+
+    /* Plain words for the Cal.com side of the request, because until now
+       the only way to know whether a row was linked to a real booking was
+       to mark it paid and watch nothing happen. */
+    var CAL_STATE = {
+      pending:   'بانتظار التثبيت',
+      accepted:  'مثبّت',
+      cancelled: 'ملغي',
+      unlinked:  'غير مرتبط'
+    };
+    var calState = unlinked ? 'لا يوجد حجز مرتبط'
+                            : (CAL_STATE[r.cal_status] || r.cal_status || 'غير معروف');
 
     el.drawerBody.innerHTML =
+      (unlinked
+        ? '<div class="warn">' +
+            '<strong>تنبيه:</strong> هذا الطلب غير مرتبط بحجز في Cal.com، ' +
+            'فلن يؤدّي تغيير الحالة إلى «مدفوع» إلى تثبيت أي موعد، ووقت الجلسة ما زال معروضًا في التقويم. ' +
+            'احجزي الموعد يدويًا من Cal.com.' +
+          '</div>'
+        : '') +
       (autoAccepted
         ? '<div class="warn">' +
             '<strong>تنبيه:</strong> ثبّت Cal.com هذا الحجز فورًا وأرسل التأكيد للعميل قبل الدفع. ' +
@@ -205,6 +252,8 @@
         kv('الموعد', esc(fmtSlot(r.starts_at, r.time_zone))) +
         kv('المدة', r.duration_minutes ? esc(r.duration_minutes) + ' دقيقة' : '—') +
         kv('المبلغ', '<strong>' + esc(r.price) + ' ريال</strong>') +
+        kv('حالة التقويم', esc(calState) +
+           (r.cal_booking_uid ? ' <small dir="ltr">(' + esc(r.cal_booking_uid) + ')</small>' : '')) +
       '</div>' +
 
       '<div class="block">' +
@@ -233,7 +282,7 @@
         '</div>' +
         '<p class="status-msg" id="status-msg">' +
           (r.status === 'paid'
-            ? 'الحجز مثبَّت في التقويم' + (r.paid_at ? ' — ' + esc(fmtAgo(r.paid_at)) : '')
+            ? esc(paidLine(r))
             : 'اختاري الحالة ثم اضغطي «تطبيق التغيير».') +
         '</p>' +
         '<button class="btn btn--primary btn--block" type="button" id="apply-status" disabled>' +
@@ -288,7 +337,7 @@
       msg.textContent = changed
         ? EFFECT[picked]
         : (r.status === 'paid'
-            ? 'الحجز مثبَّت في التقويم' + (r.paid_at ? ' — ' + fmtAgo(r.paid_at) : '')
+            ? paidLine(r)
             : 'اختاري الحالة ثم اضغطي «تطبيق التغيير».');
       msg.classList.toggle('is-warn', changed && (picked === 'paid' || picked === 'cancelled'));
     }
@@ -313,7 +362,7 @@
           refreshStatusUI();
           return;
         }
-        say('تم تحديث الحالة إلى «' + STATUS[picked] + '»');
+        say(statusResultText(picked, out.json.calendar), out.json.calendar === 'none');
         load();
       });
     });
