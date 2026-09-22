@@ -368,7 +368,10 @@ body.nav-open{ overflow:hidden; }
 .sprig--a{ inset-inline-start:12.22%; top:0; }      /* services, top right */
 .sprig--b{ inset-inline-end:28.40%; bottom:-5px; }  /* services, bottom left */
 .sprig--c{ inset-inline-end:15.49%; top:0; }        /* booking,  top left */
-.sprig--d{ inset-inline-start:16.18%; bottom:0; }   /* booking,  bottom right */
+/* Mirrored head to foot so it grows up out of the bottom edge instead of
+   hanging down into it. The static transform is what reduced motion sees,
+   since the sway below replaces transform outright while it runs. */
+.sprig--d{ inset-inline-start:16.18%; bottom:0; --flipY:-1; transform:scaleY(-1); }
 
 /* ══════════════════════ SERVICES ══════════════════════ */
 .services{ padding-block:clamp(56px,8vw,152px); }
@@ -908,8 +911,8 @@ body.is-ready .site-header{
   50%    { transform:translateY(-4px); }
 }
 @keyframes sway{
-  0%,100%{ transform:scaleX(var(--flip,1)) rotate(-.7deg); }
-  50%    { transform:scaleX(var(--flip,1)) rotate(.7deg); }
+  0%,100%{ transform:scaleX(var(--flip,1)) scaleY(var(--flipY,1)) rotate(-.7deg); }
+  50%    { transform:scaleX(var(--flip,1)) scaleY(var(--flipY,1)) rotate(.7deg); }
 }
 @keyframes halo{
   0%     { box-shadow:0 0 0 0 rgba(26,80,56,.28); }
@@ -931,7 +934,10 @@ body.is-ready .site-header{
 .sprig--a{ animation-delay:-2s; }
 .sprig--b{ --flip:-1; animation-delay:-5s; }
 .sprig--c{ --flip:-1; animation-delay:-8s; }
-.sprig--d{ animation-delay:-3.5s; }
+/* The flipped one pivots at its middle: scaleY about an edge mirrors the
+   box past that edge and shifts it a full height off its position, and at
+   a 1.4deg sway the pivot is invisible anyway. */
+.sprig--d{ animation-delay:-3.5s; transform-origin:50% 50%; }
 
 /* ── slots and calendar cells arrive in sequence ───────── */
 @keyframes pop-in{
